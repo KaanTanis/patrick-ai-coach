@@ -42,5 +42,6 @@ BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="unut", description="Hafızayı temizle"),
     BotCommand(command="sil", description="Tüm verileri kalıcı sil"),
     BotCommand(command="hatirla", description="Bot seni ne kadar tanıyor"),
+    BotCommand(command="ozet", description="Günlük brifing özeti"),
     BotCommand(command="iptal", description="Aktif işlemi iptal et"),
 ]

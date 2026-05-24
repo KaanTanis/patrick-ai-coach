@@ -448,6 +448,31 @@ class InsightRepository:
         )
         return result.scalar_one()
 
+    async def dismiss(self, user_id: int, insight_id: int) -> bool:
+        result = await self.session.execute(
+            select(BehavioralInsight).where(
+                BehavioralInsight.id == insight_id,
+                BehavioralInsight.user_id == user_id,
+            )
+        )
+        insight = result.scalar_one_or_none()
+        if not insight:
+            return False
+        insight.dismissed = True
+        return True
+
+    async def dismiss_all_active(self, user_id: int) -> int:
+        result = await self.session.execute(
+            select(BehavioralInsight).where(
+                BehavioralInsight.user_id == user_id,
+                BehavioralInsight.dismissed.is_(False),
+            )
+        )
+        insights = list(result.scalars().all())
+        for insight in insights:
+            insight.dismissed = True
+        return len(insights)
+
 
 class PersonalityRepository:
     def __init__(self, session: AsyncSession):

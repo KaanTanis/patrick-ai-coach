@@ -1,8 +1,10 @@
 from aiogram import Router
 from aiogram.filters import Command, CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.bot.handlers.onboarding import needs_onboarding, start_onboarding
 from app.bot.keyboards import main_menu_keyboard
 from app.repositories import UserRepository
 
@@ -26,10 +28,12 @@ WELCOME_TEXT = (
 
 @router.message(CommandStart())
 @router.message(Command("basla"))
-async def cmd_start(message: Message, session: AsyncSession) -> None:
+async def cmd_start(message: Message, session: AsyncSession, state: FSMContext) -> None:
     users = UserRepository(session)
-    await users.get_or_create(
+    user = await users.get_or_create(
         telegram_id=message.from_user.id,
         name=message.from_user.full_name,
     )
     await message.answer(WELCOME_TEXT, reply_markup=main_menu_keyboard())
+    if await needs_onboarding(session, user.id):
+        await start_onboarding(message, state)

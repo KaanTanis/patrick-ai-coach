@@ -3,21 +3,23 @@ from aiogram.fsm.state import State, StatesGroup
 
 class CheckInStates(StatesGroup):
     adaptive = State()
-    # Legacy states kept for compatibility
-    mood = State()
-    sleep = State()
-    energy = State()
-    cravings = State()
-    workout = State()
-    workout_type = State()
-    stress = State()
-    weight = State()
-    motivation = State()
-    notes = State()
 
 
 class ErasureStates(StatesGroup):
     confirm = State()
+
+
+class SetbackStates(StatesGroup):
+    description = State()
+    trigger = State()
+    action = State()
+
+
+class OnboardingStates(StatesGroup):
+    sleep_window = State()
+    main_goal = State()
+    proactive_pref = State()
+    lens_pref = State()
 
 
 class StoicMorningStates(StatesGroup):

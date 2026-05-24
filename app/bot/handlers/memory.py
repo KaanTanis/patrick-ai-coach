@@ -45,7 +45,23 @@ async def cmd_remember(message: Message, session: AsyncSession) -> None:
     if reminders:
         parts.append("\n--- Hatırlatmalar / hedefler ---")
         for r in reminders:
-            parts.append(f"• {r.content[:120]}")
+            meta = r.metadata_ or {}
+            extra = []
+            if meta.get("deadline"):
+                extra.append(f"son: {meta['deadline']}")
+            if meta.get("frequency"):
+                extra.append(meta["frequency"])
+            suffix = f" ({', '.join(extra)})" if extra else ""
+            parts.append(f"• {r.content[:120]}{suffix}")
+
+    progress = await memories.get_recent_episodes(user.id, days=14, limit=5)
+    goal_updates = [
+        e for e in progress if (e.metadata_ or {}).get("type") == "goal_progress"
+    ]
+    if goal_updates:
+        parts.append("\n--- Hedef ilerlemesi ---")
+        for ep in goal_updates[:3]:
+            parts.append(f"• {ep.content[:150]}")
 
     if user.schedule:
         parts.append("\n--- Program / vardiya ---")

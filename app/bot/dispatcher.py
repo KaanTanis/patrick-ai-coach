@@ -2,6 +2,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.redis import RedisStorage
 
 from app.bot.handlers import (
+    briefing,
     cancel,
     chat,
     checkin,
@@ -11,6 +12,7 @@ from app.bot.handlers import (
     insights,
     memory,
     menu_buttons,
+    onboarding,
     personality,
     philosophy_core,
     psych,
@@ -36,6 +38,8 @@ def create_dispatcher() -> Dispatcher:
 
     dp.include_router(cancel.router)
     dp.include_router(start.router)
+    dp.include_router(onboarding.router)
+    dp.include_router(briefing.router)
     dp.include_router(commands.router)
     dp.include_router(menu_buttons.router)
     dp.include_router(checkin.router)

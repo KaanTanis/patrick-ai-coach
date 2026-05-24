@@ -123,6 +123,18 @@ NUDGE_TEMPLATES: dict[str, str] = {
     "gentle_ping": (
         "Bir süredir sessizsin. Nasılsın? İstersen sohbet edebilir veya kısa rapor verebilirsin."
     ),
+    "reminder_followup": (
+        "Kayıtlı hatırlatmaların var — son günlerde konuşmadık. Biri hâlâ gündeminde mi?"
+    ),
+    "stress_mood": (
+        "Son dönemde stresli günlerde ruh halin düşüyor gibi görünüyor. Bugün kendini nasıl hissediyorsun?"
+    ),
+    "stoic_invite": (
+        "Stoik ritüel pratiğin biraz ara vermiş. İstersen /sabah veya /aksam ile kısa bir mola?"
+    ),
+    "goal_deadline": (
+        "Hedeflerinden birinin süresi yaklaşıyor. İlerlemen nasıl gidiyor?"
+    ),
 }
 
 
@@ -134,11 +146,14 @@ class ProactiveCoach:
         self.preferences = PreferencesService(session)
 
     async def evaluate_user(self, user: User) -> OutreachDecision:
+        from app.ai.proactive.evaluator import evaluate_outreach_smart
+
         today = _user_now(user).date()
         checkin = await self.check_ins.get_by_date(user.id, today)
-        return evaluate_outreach(user, checkin is not None)
+        return await evaluate_outreach_smart(self.session, user, checkin is not None)
 
     async def compose_message(self, user: User, decision: OutreachDecision) -> str:
+        from app.ai.model_settings import fast_model
         from app.repositories import MemoryRepository
 
         base = NUDGE_TEMPLATES.get(decision.nudge_type, NUDGE_TEMPLATES["mini_pulse"])
@@ -162,7 +177,7 @@ Varsa hatırlatmalardan birini doğal şekilde ekle. Samimi ol. Rapor/check-in d
             try:
                 return await get_openai_client().chat(
                     [{"role": "user", "content": prompt}],
-                    model="gpt-4o-mini",
+                    model=fast_model(),
                     max_tokens=150,
                 )
             except Exception:

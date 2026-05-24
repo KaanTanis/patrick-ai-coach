@@ -84,7 +84,7 @@ export function NutritionPage() {
 }
 
 export function InsightsPage() {
-  const [insights, setInsights] = useState<{ title: string; body: string; type: string }[]>([]);
+  const [insights, setInsights] = useState<{ title: string; body: string; type: string; evidence?: Record<string, unknown> }[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -103,6 +103,9 @@ export function InsightsPage() {
         <div key={idx} className="insight-item">
           <h3>{i.title}</h3>
           <p>{i.body}</p>
+          {i.evidence?.action_suggestion && (
+            <p style={{ color: "var(--accent)" }}>→ {String(i.evidence.action_suggestion)}</p>
+          )}
         </div>
       ))}
     </div>
@@ -219,6 +222,78 @@ export function ConsistencyPage() {
         Blue = check-in, Green = workout day
       </p>
       <div className="heatmap">{cells}</div>
+    </div>
+  );
+}
+
+export function CoachViewPage() {
+  const [timeline, setTimeline] = useState<{ at: string; type: string; title: string }[]>([]);
+  const [goals, setGoals] = useState<{ type: string; content: string; metadata: Record<string, unknown> }[]>([]);
+  const [correlations, setCorrelations] = useState<{ flag: string; evidence: Record<string, unknown> }[]>([]);
+  const [weekly, setWeekly] = useState<string | null>(null);
+  const [tokens, setTokens] = useState<{ total_tokens: number; estimated_cost_usd: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([
+      api.timeline(30),
+      api.goals(),
+      api.correlations(),
+      api.weeklySummary(),
+      api.tokens(7),
+    ])
+      .then(([tl, g, c, w, t]) => {
+        setTimeline(tl.data);
+        setGoals(g.data);
+        setCorrelations(c.data);
+        setWeekly(w.summary);
+        setTokens(t);
+      })
+      .catch((e) => setError(e.message));
+  }, []);
+
+  if (error) return <div className="error">{error}</div>;
+
+  return (
+    <div className="grid">
+      <div className="card">
+        <h2>Weekly Summary</h2>
+        <p style={{ color: "var(--muted)" }}>{weekly || "No weekly summary yet."}</p>
+      </div>
+      <div className="card">
+        <h2>Token Usage (7d)</h2>
+        <p>{tokens?.total_tokens ?? 0} tokens · ${tokens?.estimated_cost_usd ?? 0}</p>
+      </div>
+      <div className="card">
+        <h2>Goals & Reminders</h2>
+        {goals.length === 0 && <p style={{ color: "var(--muted)" }}>No goals yet.</p>}
+        {goals.map((g, i) => (
+          <div key={i} className="memory-item">
+            <span className="memory-type">{g.type}</span>
+            {g.content}
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <h2>Correlation Flags</h2>
+        {correlations.map((c, i) => (
+          <div key={i} className="memory-item">
+            <strong>{c.flag}</strong>
+            <pre style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
+              {JSON.stringify(c.evidence)}
+            </pre>
+          </div>
+        ))}
+      </div>
+      <div className="card" style={{ gridColumn: "1 / -1" }}>
+        <h2>Timeline (30d)</h2>
+        {timeline.slice(0, 40).map((e, i) => (
+          <div key={i} className="memory-item">
+            <span className="memory-type">{e.type}</span>
+            {new Date(e.at).toLocaleString()} — {e.title}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

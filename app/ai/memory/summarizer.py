@@ -2,6 +2,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.memory.extractor import MemoryExtractor
+from app.ai.model_settings import fast_model
 from app.ai.openai_client import get_openai_client
 from app.models import MemorySource, MemoryType
 from app.repositories import ConversationRepository, MemoryRepository
@@ -30,7 +31,7 @@ Duygusal durum, konuşulan davranışlar ve ortaya çıkan içgörülere odaklan
 
         summary = await get_openai_client().chat(
             [{"role": "user", "content": prompt}],
-            model="gpt-4o-mini",
+            model=fast_model(),
             max_tokens=200,
         )
 

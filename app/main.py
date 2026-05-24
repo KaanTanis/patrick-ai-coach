@@ -7,13 +7,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api.routes import insights, memories, metrics, philosophy
+from app.api.routes import insights, memories, metrics, philosophy, timeline
 from app.config import get_settings
 from app.db import async_session_factory, engine
 from app.infra.redis import close_infra, get_redis
 from app.logging_config import configure_logging
 from app.metrics import MetricsMiddleware, metrics_response
 from app.middleware.correlation import CorrelationMiddleware
+from app.middleware.rate_limit import ApiRateLimitMiddleware
 
 configure_logging()
 logger = structlog.get_logger()
@@ -88,12 +89,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(CorrelationMiddleware)
+app.add_middleware(ApiRateLimitMiddleware)
 app.add_middleware(MetricsMiddleware)
 
 app.include_router(metrics.router, prefix="/api")
 app.include_router(insights.router, prefix="/api")
 app.include_router(memories.router, prefix="/api")
 app.include_router(philosophy.router, prefix="/api")
+app.include_router(timeline.router, prefix="/api")
 
 
 @app.get("/health/live")

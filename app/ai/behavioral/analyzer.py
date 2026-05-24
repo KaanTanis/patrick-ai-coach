@@ -3,7 +3,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.repositories import CheckInRepository, MealRepository, MemoryRepository, WorkoutRepository
+from app.repositories import CheckInRepository, MealRepository, MemoryRepository
 from app.repositories.philosophy import DreamRepository, EmotionRepository, StoicRitualRepository
 
 
@@ -17,7 +17,6 @@ class BehavioralAnalyzer:
         self.session = session
         self.check_ins = CheckInRepository(session)
         self.meals = MealRepository(session)
-        self.workouts = WorkoutRepository(session)
         self.dreams = DreamRepository(session)
         self.emotions = EmotionRepository(session)
         self.stoic = StoicRitualRepository(session)
@@ -71,14 +70,25 @@ class BehavioralAnalyzer:
                         },
                     }
                 )
+                poor_dates = {c.date for c in poor_sleep}
+                missed_after_poor = sum(
+                    1 for d in poor_dates
+                    if not any(c.date == d for c in checkins)
+                )
+                if missed_after_poor >= 2:
+                    flags.append(
+                        {
+                            "flag": "sleep_motivation_checkin_chain",
+                            "evidence": {"poor_sleep_days_without_checkin": missed_after_poor},
+                        }
+                    )
 
-        workouts = await self.workouts.get_recent(user_id, days=30)
-        completed = [w for w in workouts if w.completed]
-        if len(checkins) >= 14 and len(completed) < 3:
+        workout_days = sum(1 for c in checkins if c.workout_done)
+        if len(checkins) >= 14 and workout_days < 3:
             flags.append(
                 {
                     "flag": "workout_inconsistency",
-                    "evidence": {"workouts_last_30_days": len(completed)},
+                    "evidence": {"workout_days_last_30": workout_days},
                 }
             )
 
@@ -195,6 +205,37 @@ class BehavioralAnalyzer:
                     {
                         "flag": "emotion_stress_correlation",
                         "evidence": {"stress_day_emotions": len(high_stress_emotions)},
+                    }
+                )
+
+        if high_stress and meals:
+            high_stress_dates = {c.date for c in high_stress}
+            stress_meals = [m for m in meals if m.logged_at.date() in high_stress_dates]
+            low_energy_stress = sum(
+                1 for c in checkins
+                if c.date in high_stress_dates and c.energy and c.energy <= 4
+            )
+            if len(stress_meals) >= 2 and low_energy_stress >= 2:
+                flags.append(
+                    {
+                        "flag": "stress_food_energy_chain",
+                        "evidence": {
+                            "stress_day_meals": len(stress_meals),
+                            "low_energy_stress_days": low_energy_stress,
+                        },
+                    }
+                )
+
+        recent_setback = await self.memories.get_recent_relapse(user_id, days=7)
+        if recent_setback:
+            since = recent_setback.created_at.date()
+            dream_list_recent = await self.dreams.get_recent(user_id, days=7, limit=10)
+            shadow_spike = sum(1 for d in dream_list_recent if d.logged_at.date() >= since)
+            if shadow_spike >= 2:
+                flags.append(
+                    {
+                        "flag": "setback_reflection_spike",
+                        "evidence": {"reflection_entries_after_setback": shadow_spike},
                     }
                 )
 

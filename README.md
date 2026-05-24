@@ -7,7 +7,7 @@ A private Telegram-based AI coach for motivation, discipline, diet tracking, wor
 - **Python 3.12** + FastAPI + aiogram 3
 - **PostgreSQL 16** + pgvector
 - **Redis** + ARQ (background jobs)
-- **OpenAI** (gpt-4o, gpt-4o-mini, embeddings, vision)
+- **OpenAI** (configurable via `OPENAI_*_MODEL` env vars; defaults: gpt-4o / gpt-4o-mini)
 - **Vite + React** dashboard (optional)
 
 ## Quick Start
@@ -47,6 +47,19 @@ See [LOCAL_START.md](LOCAL_START.md) for ngrok workflow.
 During `/rapor` or chat, say **"bu kadar soru yeter"** to save partial answers and stop.
 
 Free-form chat uses memory retrieval. Tell the bot your goals and reminders — it remembers and may nudge you later.
+
+## OpenAI Models
+
+Configure in `.env`:
+
+| Variable | Role | Default |
+|----------|------|---------|
+| `OPENAI_CHAT_MODEL` | Coaching, setbacks, `/analiz`, long chat | `gpt-4o` |
+| `OPENAI_FAST_MODEL` | Nudges, memory, summaries, short chat | `gpt-4o-mini` |
+| `OPENAI_VISION_MODEL` | Food photos (`/yemek`) | `gpt-4o` |
+| `OPENAI_EMBEDDING_MODEL` | Memory search | `text-embedding-3-small` |
+
+Short free-chat messages use `FAST`; longer or emotional messages use `CHAT`. Restart app/worker after changing `.env`.
 
 ## Personality Modes (8)
 

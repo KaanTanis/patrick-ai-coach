@@ -2,16 +2,23 @@ import json
 from pathlib import Path
 
 from app.ai.model_router import pick_chat_model
+from app.ai.model_settings import chat_model, fast_model
 from app.ai.personalities.base import CORE_IDENTITY, RELAPSE_GUARDRAILS
 
 FIXTURES = Path(__file__).parent / "eval" / "golden_prompts.json"
+
+TIER_MODEL = {
+    "chat": chat_model,
+    "fast": fast_model,
+}
 
 
 def test_golden_prompts_model_routing():
     cases = json.loads(FIXTURES.read_text())
     for case in cases:
         model = pick_chat_model(case["user_message"], case["intent"])
-        assert model == case["expected_model"], case["id"]
+        expected = TIER_MODEL[case["expected_tier"]]()
+        assert model == expected, case["id"]
 
 
 def test_core_identity_has_memory_rules():

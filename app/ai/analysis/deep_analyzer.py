@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.context.bundle import ContextBuilder
+from app.ai.model_settings import chat_model
 from app.ai.openai_client import get_openai_client
 from app.ai.philosophy.helpers import (
     compute_stoic_consistency,
@@ -87,9 +88,20 @@ class DeepAnalyzer:
         emotions = await self.emotions.get_recent(user_id, days=days, limit=20)
         checkins = await self.check_ins.get_recent(user_id, days=days)
 
+        from app.ai.behavioral.analyzer import BehavioralAnalyzer
+        from app.repositories import MemoryRepository
+
+        analyzer = BehavioralAnalyzer(self.session)
+        flags = await analyzer.detect_patterns(user_id)
+        goals = await MemoryRepository(self.session).get_reminders(user_id, limit=5)
+        recent_setback = await MemoryRepository(self.session).get_recent_relapse(user_id, days=30)
+
         parts = [
             f"Profil: {bundle.profile_summary[:500]}",
             f"Check-in ({len(checkins)}): {bundle.checkin_snapshot[:400]}",
+            f"Davranış kalıpları: {[f['flag'] for f in flags[:5]]}",
+            f"Hedefler: {[g.content[:60] for g in goals]}",
+            f"Son gerileme: {recent_setback.content[:100] if recent_setback else 'yok'}",
             f"Rüyalar: {[d.content[:80] for d in dreams]}",
             f"Gölge notları: {[s.content[:80] for s in shadows]}",
             f"Düşünce kayıtları: {len(thoughts)} adet",
@@ -116,6 +128,6 @@ Son {days} gün verileri:
 
         return await get_openai_client().chat(
             [{"role": "user", "content": prompt}],
-            model="gpt-4o",
+            model=chat_model(),
             max_tokens=900,
         )

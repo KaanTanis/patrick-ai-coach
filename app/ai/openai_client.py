@@ -10,6 +10,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from app.ai.embedding_cache import get_cached_embedding, set_cached_embedding
+from app.ai.model_settings import chat_model, embedding_model, fast_model, vision_model
 from app.config import get_settings
 from app.metrics import OPENAI_REQUESTS, OPENAI_TOKENS
 
@@ -68,10 +69,11 @@ class OpenAIClient:
     async def chat(
         self,
         messages: list[dict[str, str]],
-        model: str = "gpt-4o",
+        model: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 800,
     ) -> str:
+        model = model or chat_model()
         self._check_circuit()
         for attempt in range(3):
             try:
@@ -106,8 +108,9 @@ class OpenAIClient:
         self,
         messages: list[dict[str, str]],
         response_model: type[BaseModel],
-        model: str = "gpt-4o-mini",
+        model: str | None = None,
     ) -> BaseModel:
+        model = model or fast_model()
         self._check_circuit()
         for attempt in range(3):
             try:
@@ -133,7 +136,8 @@ class OpenAIClient:
                 await asyncio.sleep(2**attempt)
         raise RuntimeError("Structured chat failed")
 
-    async def embed(self, text: str, model: str = "text-embedding-3-small") -> list[float]:
+    async def embed(self, text: str, model: str | None = None) -> list[float]:
+        model = model or embedding_model()
         cached = await get_cached_embedding(text)
         if cached is not None:
             OPENAI_REQUESTS.labels(model=model, operation="embed", status="cache_hit").inc()
@@ -157,7 +161,7 @@ class OpenAIClient:
         image_data = base64.b64encode(image_path.read_bytes()).decode("utf-8")
         suffix = image_path.suffix.lower().lstrip(".")
         mime = "jpeg" if suffix in {"jpg", "jpeg"} else suffix or "jpeg"
-        model = "gpt-4o"
+        model = vision_model()
 
         try:
             response = await self.client.chat.completions.create(

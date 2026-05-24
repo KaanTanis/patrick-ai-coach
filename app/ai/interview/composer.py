@@ -4,6 +4,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.model_settings import fast_model
 from app.ai.openai_client import get_openai_client
 from app.repositories import CheckInRepository, MemoryRepository, UserRepository
 
@@ -97,7 +98,7 @@ Sadece soruyu yaz, açıklama ekleme."""
         try:
             text = await get_openai_client().chat(
                 [{"role": "user", "content": prompt}],
-                model="gpt-4o-mini",
+                model=fast_model(),
                 max_tokens=80,
             )
             return text.strip() or default

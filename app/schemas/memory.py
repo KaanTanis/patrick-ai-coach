@@ -9,6 +9,9 @@ class ExtractedMemoryItem(BaseModel):
         "fact", "trigger", "pattern", "goal", "relapse", "schedule", "episode", "reminder"
     ] = "fact"
     importance: float = Field(default=0.5, ge=0.0, le=1.0)
+    deadline: str | None = None
+    frequency: str | None = None
+    success_signal: str | None = None
 
 
 class MemoryExtracted(BaseModel):

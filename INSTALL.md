@@ -162,6 +162,21 @@ Worker çalışmıyorsa `/health/ready` worker'ı "stale" gösterir. Terminal 2'
 
 ---
 
+## Production (docker-compose.prod.yml)
+
+1. `.env` içinde `ENV=production`, güçlü `API_KEY`, `TELEGRAM_WEBHOOK_SECRET` ayarla.
+2. Sunucuda TLS için reverse proxy (Caddy/nginx) kullan; webhook URL `https://domain/webhook/telegram`.
+3. İlk deploy sonrası:
+   ```bash
+   docker compose -f docker-compose.prod.yml exec app alembic upgrade head
+   docker compose -f docker-compose.prod.yml exec app python scripts/seed_personalities.py
+   ```
+4. Yedekleme: `scripts/backup.sh` cron ile günlük çalıştır (pg_dump + photos).
+5. Dashboard: image build aşamasında derlenir; `/` üzerinden API key ile erişilir.
+6. API rate limit: `/api/*` için dakikada 120 istek (Redis tabanlı).
+
+---
+
 ## Sonraki adımlar
 
 Günlük kullanım için: **[LOCAL_START.md](LOCAL_START.md)**

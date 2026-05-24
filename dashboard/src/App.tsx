@@ -7,9 +7,10 @@ import {
   MemoriesPage,
   PhilosophyPage,
   ConsistencyPage,
+  CoachViewPage,
 } from "./pages/Dashboard";
 
-type Tab = "overview" | "nutrition" | "insights" | "memories" | "philosophy" | "consistency";
+type Tab = "overview" | "nutrition" | "insights" | "memories" | "philosophy" | "consistency" | "coach";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
@@ -18,6 +19,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "memories", label: "Memories" },
   { id: "philosophy", label: "Philosophy" },
   { id: "consistency", label: "Consistency" },
+  { id: "coach", label: "Coach View" },
 ];
 
 export default function App() {
@@ -69,6 +71,7 @@ export default function App() {
       {tab === "memories" && <MemoriesPage />}
       {tab === "philosophy" && <PhilosophyPage />}
       {tab === "consistency" && <ConsistencyPage />}
+      {tab === "coach" && <CoachViewPage />}
     </div>
   );
 }

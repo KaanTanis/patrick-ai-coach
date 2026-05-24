@@ -3,21 +3,35 @@
     "id": "greeting",
     "user_message": "Merhaba",
     "intent": "free_chat",
-    "expected_model": "gpt-4o-mini",
+    "expected_tier": "fast",
     "system_must_include": ["Türkçe", "profil"]
   },
   {
-    "id": "relapse",
-    "user_message": "Bugün sigara içtim, kendimi kötü hissediyorum",
-    "intent": "relapse",
-    "expected_model": "gpt-4o",
-    "system_must_include": ["RELAPSE", "Türkçe"]
+    "id": "setback",
+    "user_message": "Bugün geriledim, kendimi kötü hissediyorum",
+    "intent": "setback",
+    "expected_tier": "chat",
+    "system_must_include": ["gerileme", "Türkçe"]
+  },
+  {
+    "id": "goal_reminder",
+    "user_message": "Bana her akşam spor yapmayı hatırlat",
+    "intent": "free_chat",
+    "expected_tier": "fast",
+    "system_must_include": ["Türkçe"]
+  },
+  {
+    "id": "crisis",
+    "user_message": "Kendimi çok kötü hissediyorum ama devam etmek istiyorum",
+    "intent": "free_chat",
+    "expected_tier": "fast",
+    "system_must_include": ["Türkçe"]
   },
   {
     "id": "deep_reflection",
-    "user_message": "Son birkaç haftadır motivasyonum düşük ve eski alışkanlıklarıma dönüyorum — bunun altında ne olabilir?",
+    "user_message": "Son birkaç haftadır motivasyonum düşük — bunun altında ne olabilir?",
     "intent": "free_chat",
-    "expected_model": "gpt-4o",
+    "expected_tier": "chat",
     "system_must_include": ["Geçmişe", "tutarlılık"]
   }
 ]

@@ -4,6 +4,7 @@ from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.analysis.deep_analyzer import DeepAnalyzer
+from app.ai.model_settings import chat_model, fast_model
 from app.ai.openai_client import get_openai_client
 from app.ai.philosophy.helpers import format_shadow_context, parse_dream_metadata
 from app.models import MemorySource, MemoryType
@@ -51,7 +52,7 @@ async def cmd_dream(message: Message, session: AsyncSession) -> None:
                 ),
             }
         ],
-        model="gpt-4o-mini",
+        model=fast_model(),
         max_tokens=120,
     )
     metadata = parse_dream_metadata(meta_raw)
@@ -64,7 +65,7 @@ Mood: {metadata.get('mood') or 'belirtilmedi'}
 Semboller: {metadata.get('symbols') or []}"""
 
     interpretation = await get_openai_client().chat(
-        [{"role": "user", "content": prompt}], model="gpt-4o", max_tokens=400
+        [{"role": "user", "content": prompt}], model=chat_model(), max_tokens=400
     )
 
     dreams = DreamRepository(session)
@@ -127,7 +128,7 @@ Bağlam:
 Bugünkü gölge notu: {content}"""
 
     reflection = await get_openai_client().chat(
-        [{"role": "user", "content": prompt}], model="gpt-4o", max_tokens=300
+        [{"role": "user", "content": prompt}], model=chat_model(), max_tokens=300
     )
 
     await shadows.create(user.id, content, reflection)

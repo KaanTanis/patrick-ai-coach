@@ -4,6 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.model_settings import fast_model
 from app.ai.openai_client import get_openai_client
 from app.ai.personalities.lenses import CRISIS_KEYWORDS, CRISIS_RESPONSE
 from app.bot.keyboards import rating_keyboard, skip_keyboard
@@ -90,7 +91,7 @@ Kanıt: {data.get('evidence_for')}
 Kanıt aleyh: {data.get('evidence_against')}"""
 
     suggestion = await get_openai_client().chat(
-        [{"role": "user", "content": prompt}], model="gpt-4o-mini", max_tokens=150
+        [{"role": "user", "content": prompt}], model=fast_model(), max_tokens=150
     )
     await state.update_data(balanced_suggestion=suggestion)
     await state.set_state(ThoughtRecordStates.balanced)
@@ -178,7 +179,7 @@ Duygu: {data.get('emotion')} ({data.get('intensity')}/10)
 Bedensel: {body or 'belirtilmedi'}"""
 
     reflection = await get_openai_client().chat(
-        [{"role": "user", "content": prompt}], model="gpt-4o-mini", max_tokens=200
+        [{"role": "user", "content": prompt}], model=fast_model(), max_tokens=200
     )
     data["ai_reflection"] = reflection
 

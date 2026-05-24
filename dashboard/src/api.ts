@@ -1,5 +1,12 @@
 const API_KEY_STORAGE = "tbot_api_key";
 
+export type TimelineEvent = {
+  at: string;
+  type: string;
+  title: string;
+  detail: Record<string, unknown>;
+};
+
 export function getApiKey(): string {
   return localStorage.getItem(API_KEY_STORAGE) || "";
 }
@@ -25,7 +32,19 @@ export const api = {
     fetchApi<{ data: { date: string; calories: number }[] }>(`/metrics/calories?days=${days}`),
   heatmap: (days = 90) =>
     fetchApi<{ checkins: string[]; workouts: string[] }>(`/metrics/consistency/heatmap?days=${days}`),
-  insights: () => fetchApi<{ data: { title: string; body: string; type: string; confidence: number }[] }>("/insights"),
+  tokens: (days = 7) =>
+    fetchApi<{ total_tokens: number; estimated_cost_usd: number }>(`/metrics/tokens?days=${days}`),
+  timeline: (days = 30) =>
+    fetchApi<{ data: TimelineEvent[] }>(`/timeline?days=${days}`),
+  weeklySummary: () => fetchApi<{ summary: string | null }>("/timeline/weekly-summary"),
+  correlations: () => fetchApi<{ data: { flag: string; evidence: Record<string, unknown> }[] }>(
+    "/timeline/correlations"
+  ),
+  goals: () =>
+    fetchApi<{ data: { type: string; content: string; metadata: Record<string, unknown> }[] }>(
+      "/timeline/goals"
+    ),
+  insights: () => fetchApi<{ data: { id: number; title: string; body: string; type: string; evidence?: Record<string, unknown> }[] }>("/insights"),
   memories: () =>
     fetchApi<{ data: { type: string; content: string; importance: number }[] }>("/memories"),
   emotions: (days = 30) =>

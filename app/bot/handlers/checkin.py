@@ -40,6 +40,40 @@ def _answers_to_checkin(answers: dict) -> dict:
     return data
 
 
+async def save_partial_checkin(
+    message: Message, state: FSMContext, session: AsyncSession
+) -> bool:
+    """Save partial check-in answers if any. Returns True if state was check-in."""
+    current = await state.get_state()
+    if not current or not current.endswith(":adaptive"):
+        return False
+    data = await state.get_data()
+    answers = data.get("answers", {})
+    if answers:
+        await _save_partial(message, state, session, answers)
+    else:
+        await state.clear()
+        await message.answer("Tamam, sohbete döndük. Ne hakkında konuşmak istersin?")
+    return True
+
+
+async def _sync_workout_record(
+    session: AsyncSession, user_id: int, answers: dict
+) -> None:
+    if not answers.get("workout"):
+        return
+    from app.repositories import WorkoutRepository
+
+    workouts = WorkoutRepository(session)
+    await workouts.create(
+        user_id,
+        {
+            "type": answers.get("workout_type"),
+            "completed": True,
+        },
+    )
+
+
 async def _save_partial(
     message: Message, state: FSMContext, session: AsyncSession, answers: dict
 ) -> None:
@@ -107,6 +141,7 @@ async def _finalize_checkin(message: Message, state: FSMContext, session: AsyncS
 
     service = CheckInService(session)
     check_in = await service.save_checkin(user.id, checkin_data, timezone=user.timezone)
+    await _sync_workout_record(session, user.id, answers)
     await message.answer("Raporun kaydedildi.")
 
     insight = await service.generate_insight(user.id, check_in)
@@ -233,6 +268,6 @@ async def adaptive_callback(callback: CallbackQuery, state: FSMContext, session:
         await _finalize_checkin(callback.message, state, session)
 
 
-@router.message(StateFilter(CheckInStates))
+@router.message(StateFilter(CheckInStates.adaptive))
 async def checkin_fsm_fallback(message: Message) -> None:
     await message.answer("Rapor akışındasın. Soruları yanıtla veya /iptal yaz.")

@@ -7,6 +7,7 @@ from app.ai.behavioral.insights import InsightGenerator
 from app.ai.memory.extractor import MemoryExtractor
 from app.ai.memory.summarizer import SessionSummarizer
 from app.config import get_settings
+from app.ai.model_settings import fast_model
 from app.db import async_session_factory
 from app.jobs.scheduler import build_cron_jobs
 from app.models import Meal, User
@@ -91,7 +92,8 @@ async def generate_weekly_reflection(ctx: dict) -> None:
     from aiogram import Bot
 
     from app.ai.openai_client import get_openai_client
-    from app.repositories import CheckInRepository, InsightRepository
+    from app.models import MemorySource, MemoryType
+    from app.repositories import CheckInRepository, InsightRepository, MemoryRepository
 
     bot = Bot(token=settings.telegram_bot_token)
     async with async_session_factory() as session:
@@ -100,10 +102,12 @@ async def generate_weekly_reflection(ctx: dict) -> None:
         for user in users:
             checkins = CheckInRepository(session)
             insights = InsightRepository(session)
+            memories = MemoryRepository(session)
             recent = await checkins.get_recent(user.id, days=7)
             active_insights = await insights.get_active(user.id, limit=3)
+            goals = await memories.get_reminders(user.id, limit=5)
 
-            if not recent:
+            if not recent and not goals:
                 continue
 
             summary_data = [
@@ -111,17 +115,22 @@ async def generate_weekly_reflection(ctx: dict) -> None:
                 for c in recent
             ]
             insight_data = [f"{i.title}: {i.body}" for i in active_insights]
+            goal_data = [
+                f"{g.content} (meta: {g.metadata_ or {}})" for g in goals
+            ]
 
             prompt = f"""Kişisel koçluk kullanıcısı için sıcak bir haftalık yansıma yaz.
 Check-in'ler: {summary_data}
 İçgörüler: {insight_data}
+Hedefler: {goal_data}
+Her hedef için kısa ilerleme sorusu ve 1 mikro adım öner.
 200 kelimenin altında tut. Tutarlılığı kutla, bir kalıp not et, gelecek hafta için bir odak öner.
 Türkçe yaz."""
 
             reflection = await get_openai_client().chat(
                 [{"role": "user", "content": prompt}],
-                model="gpt-4o-mini",
-                max_tokens=300,
+                model=fast_model(),
+                max_tokens=350,
             )
 
             try:
@@ -129,19 +138,104 @@ Türkçe yaz."""
             except Exception as exc:
                 logger.warning("job.reflection_failed", user_id=user.id, error=str(exc))
 
-            from app.ai.openai_client import get_openai_client
-            from app.models import MemorySource, MemoryType
-            from app.repositories import MemoryRepository
-
-            mem_repo = MemoryRepository(session)
             embedding = await get_openai_client().embed(reflection)
-            await mem_repo.create(
+            await memories.create(
                 user_id=user.id,
                 memory_type=MemoryType.EPISODE,
                 content=reflection,
                 importance=0.8,
                 source=MemorySource.ANALYSIS,
                 metadata={"type": "weekly_reflection"},
+                embedding=embedding,
+            )
+
+            if goals:
+                goal_prompt = f"""Haftalık hedef ilerlemesi özeti (max 120 kelime, Türkçe):
+Hedefler: {goal_data}
+Check-in'ler: {summary_data}"""
+                goal_review = await get_openai_client().chat(
+                    [{"role": "user", "content": goal_prompt}],
+                    model=fast_model(),
+                    max_tokens=200,
+                )
+                await memories.create(
+                    user_id=user.id,
+                    memory_type=MemoryType.EPISODE,
+                    content=goal_review,
+                    importance=0.75,
+                    source=MemorySource.ANALYSIS,
+                    metadata={"type": "goal_progress"},
+                )
+        await session.commit()
+    await bot.session.close()
+
+
+async def setback_followup_task(ctx: dict, user_id: int, telegram_id: int) -> None:
+    from aiogram import Bot
+
+    bot = Bot(token=settings.telegram_bot_token)
+    try:
+        await bot.send_message(
+            telegram_id,
+            "Geçen gün zor bir andı geçirmiştin — bugün nasıl gidiyor? İstersen kısaca yaz.",
+        )
+    except Exception as exc:
+        logger.warning("job.setback_followup_failed", user_id=user_id, error=str(exc))
+    finally:
+        await bot.session.close()
+
+
+async def generate_first_week_summary(ctx: dict) -> None:
+    from aiogram import Bot
+
+    from app.ai.openai_client import get_openai_client
+    from app.models import MemorySource, MemoryType
+    from app.repositories import CheckInRepository, MemoryRepository
+
+    bot = Bot(token=settings.telegram_bot_token)
+    async with async_session_factory() as session:
+        result = await session.execute(select(User))
+        users = list(result.scalars().all())
+        mem_repo = MemoryRepository(session)
+        checkins = CheckInRepository(session)
+
+        for user in users:
+            if not user.created_at:
+                continue
+            age_days = (datetime.now(timezone.utc) - user.created_at).days
+            if age_days != 7:
+                continue
+
+            episodes = await mem_repo.get_recent_episodes(user.id, days=14, limit=20)
+            if any((e.metadata_ or {}).get("type") == "first_week_summary" for e in episodes):
+                continue
+
+            recent = await checkins.get_recent(user.id, days=7)
+            goals = await mem_repo.get_reminders(user.id, limit=5)
+            prompt = f"""İlk hafta özeti yaz (max 180 kelime, Türkçe, sıcak).
+Check-in sayısı: {len(recent)}
+Hedefler: {[g.content for g in goals]}
+Profil: {(user.context_summary or '')[:400]}"""
+
+            summary = await get_openai_client().chat(
+                [{"role": "user", "content": prompt}],
+                model=fast_model(),
+                max_tokens=280,
+            )
+
+            try:
+                await bot.send_message(user.telegram_id, f"İlk hafta özeti\n\n{summary}")
+            except Exception as exc:
+                logger.warning("job.first_week_failed", user_id=user.id, error=str(exc))
+
+            embedding = await get_openai_client().embed(summary)
+            await mem_repo.create(
+                user_id=user.id,
+                memory_type=MemoryType.EPISODE,
+                content=summary,
+                importance=0.85,
+                source=MemorySource.ANALYSIS,
+                metadata={"type": "first_week_summary"},
                 embedding=embedding,
             )
         await session.commit()
@@ -176,8 +270,23 @@ async def generate_monthly_archetype(ctx: dict) -> None:
             dream_texts = [d.content[:120] for d in dreams]
             shadow_texts = [s.content[:120] for s in shadows]
 
+            from app.repositories import CheckInRepository
+            from app.repositories.philosophy import StoicRitualRepository
+
+            checkin_repo = CheckInRepository(session)
+            stoic_repo = StoicRitualRepository(session)
+            recent_ci = await checkin_repo.get_recent(user.id, days=30)
+            avg_mood = sum(c.mood or 0 for c in recent_ci) / max(len(recent_ci), 1)
+            avg_stress = sum(c.stress or 0 for c in recent_ci) / max(len(recent_ci), 1)
+            ritual_counts = await stoic_repo.count_recent_by_type(user.id, days=30)
+            goals = await mem_repo.get_reminders(user.id, limit=5)
+
             prompt = f"""Jung perspektifinden aylık arketip özeti yaz.
 Teşhis yok, kehanet yok. Destekleyici ve meraklı ol. 200 kelime altı Türkçe.
+
+Sayısal özet: ort. ruh hali {avg_mood:.1f}/10, ort. stres {avg_stress:.1f}/10,
+stoik ritüel sabah {ritual_counts.get('morning', 0)}, akşam {ritual_counts.get('evening', 0)},
+hedef sayısı {len(goals)}.
 
 Rüyalar: {dream_texts}
 Gölge notları: {shadow_texts}
@@ -187,7 +296,7 @@ Episodik özetler: {episode_texts}
 
             summary = await get_openai_client().chat(
                 [{"role": "user", "content": prompt}],
-                model="gpt-4o-mini",
+                model=fast_model(),
                 max_tokens=350,
             )
 
@@ -316,6 +425,8 @@ class WorkerSettings:
         update_user_profile_task,
         decay_memory_importance,
         generate_weekly_reflection,
+        setback_followup_task,
+        generate_first_week_summary,
         cleanup_old_conversations,
         cleanup_old_photos,
         consolidate_memories_task,
@@ -329,6 +440,7 @@ class WorkerSettings:
             "adaptive_outreach_task": adaptive_outreach_task,
             "decay_memory_importance": decay_memory_importance,
             "generate_weekly_reflection": generate_weekly_reflection,
+            "generate_first_week_summary": generate_first_week_summary,
             "generate_monthly_archetype": generate_monthly_archetype,
             "cleanup_old_conversations": cleanup_old_conversations,
             "cleanup_old_photos": cleanup_old_photos,

@@ -9,6 +9,7 @@ from app.models import User
 DEFAULT_PREFERENCES: dict[str, Any] = {
     "free_mode": False,
     "proactive_nudges": True,
+    "onboarding_complete": False,
 }
 
 

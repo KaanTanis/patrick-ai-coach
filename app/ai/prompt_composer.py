@@ -5,6 +5,7 @@ import yaml
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.context.bundle import ContextBundle, ContextBuilder
+from app.ai.model_settings import fast_model
 from app.ai.personalities.base import CORE_IDENTITY, SETBACK_GUARDRAILS
 from app.ai.personalities.lenses import CRISIS_KEYWORDS, CRISIS_RESPONSE, FREE_MODE_ADDENDUM
 from app.config import get_settings
@@ -193,6 +194,6 @@ Yanıtı Türkçe yaz."""
 
         return await get_openai_client().chat(
             [{"role": "user", "content": prompt}],
-            model="gpt-4o-mini",
+            model=fast_model(),
             max_tokens=max_tokens,
         )

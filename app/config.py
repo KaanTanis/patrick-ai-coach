@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     telegram_webhook_secret: str = ""
     allowed_telegram_ids: list[int] = []
     openai_api_key: str = ""
+    openai_chat_model: str = "gpt-4o"
+    openai_fast_model: str = "gpt-4o-mini"
+    openai_vision_model: str = "gpt-4o"
+    openai_embedding_model: str = "text-embedding-3-small"
     database_url: str = "postgresql+asyncpg://tbot:tbot@localhost:5432/tbot"
     redis_url: str = "redis://localhost:6379/0"
     api_key: str = "change-me"

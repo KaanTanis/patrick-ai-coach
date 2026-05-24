@@ -13,7 +13,8 @@ EXTRACTION_PROMPT = """Bu konuşma alışverişini analiz et ve kullanıcı hakk
 Sadece haftalar/aylar boyunca kişisel koça yardımcı olacak bilgileri çıkar.
 Türler: fact, trigger, pattern, goal, relapse, schedule, episode, reminder
 reminder: kullanıcının açıkça hatırlatmak istediği şeyler ("bana X hatırlat", taahhütler)
-goal: uzun vadeli hedefler (kullanıcının kendi söyledikleri — sigara vb. özellik değil, hedef olarak kaydet)
+goal: uzun vadeli hedefler (kullanıcının kendi söyledikleri)
+Hedefler için isteğe bağlı metadata: deadline (YYYY-MM-DD), frequency, success_signal
 schedule: vardiya saatleri, uyku penceresi, iş programı, aktif saatler
 episode: önemli bir olay/dönem özeti (nadir, yüksek değerli)
 Kalıcı bir şey yoksa boş liste dön.
@@ -67,6 +68,18 @@ class MemoryExtractor:
             if memory_type == MemoryType.EPISODE:
                 importance = max(importance, 0.75)
 
+            metadata: dict | None = None
+            if memory_type == MemoryType.GOAL:
+                meta: dict = {}
+                if item.deadline:
+                    meta["deadline"] = item.deadline
+                if item.frequency:
+                    meta["frequency"] = item.frequency
+                if item.success_signal:
+                    meta["success_signal"] = item.success_signal
+                if meta:
+                    metadata = meta
+
             similar = await self.retriever.find_similar(user_id, content)
             if similar:
                 similar.content = content
@@ -81,6 +94,7 @@ class MemoryExtractor:
                 content=content,
                 importance=importance,
                 embedding=embedding,
+                metadata=metadata,
             )
             stored.append(f"created:{content[:50]}")
 

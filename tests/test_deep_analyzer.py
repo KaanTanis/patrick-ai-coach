@@ -112,6 +112,11 @@ async def test_deep_analyzer_stoic_metrics_in_context():
     analyzer.check_ins.get_recent = AsyncMock(return_value=[])
     analyzer.stoic.count_recent_by_type = AsyncMock(return_value={"morning": 3, "evening": 2})
 
-    context = await analyzer._gather_context(1, 7, lens="stoic")
+    with patch("app.ai.behavioral.analyzer.BehavioralAnalyzer") as ba_cls, \
+         patch("app.repositories.MemoryRepository") as mem_cls:
+        ba_cls.return_value.detect_patterns = AsyncMock(return_value=[])
+        mem_cls.return_value.get_reminders = AsyncMock(return_value=[])
+        mem_cls.return_value.get_recent_relapse = AsyncMock(return_value=None)
+        context = await analyzer._gather_context(1, 7, lens="stoic")
     assert "Stoic tutarlılık skoru" in context
     assert "3 sabah" in context
