@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
-from typing import Any
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.models import User
 from app.repositories import CheckInRepository, UserRepository
+from app.services.preferences import PreferencesService
 
 settings = get_settings()
 
@@ -131,6 +131,7 @@ class ProactiveCoach:
         self.session = session
         self.users = UserRepository(session)
         self.check_ins = CheckInRepository(session)
+        self.preferences = PreferencesService(session)
 
     async def evaluate_user(self, user: User) -> OutreachDecision:
         today = _user_now(user).date()
@@ -163,6 +164,9 @@ Samimi ol. Rapor/check-in davet et."""
         return base
 
     async def process_user(self, user: User) -> bool:
+        if not await self.preferences.proactive_enabled(user.id):
+            return False
+
         decision = await self.evaluate_user(user)
         if not decision.should_send:
             return False

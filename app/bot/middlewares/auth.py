@@ -1,9 +1,9 @@
-from aiogram import BaseMiddleware
-from aiogram.types import Message, TelegramObject
 from collections.abc import Awaitable, Callable
 from typing import Any
 
 import structlog
+from aiogram import BaseMiddleware
+from aiogram.types import Message, TelegramObject
 
 from app.config import get_settings
 
@@ -19,6 +19,11 @@ class AuthMiddleware(BaseMiddleware):
         data: dict[str, Any],
     ) -> Any:
         if not settings.allowed_telegram_ids:
+            if settings.is_production:
+                logger.error("auth.production_no_allowlist")
+                if isinstance(event, Message):
+                    await event.answer("Bot yapılandırması hatalı. Yöneticiye bildir.")
+                return None
             logger.warning("auth.no_allowlist_configured")
             return await handler(event, data)
 

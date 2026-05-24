@@ -32,4 +32,14 @@ export const api = {
   insights: () => fetchApi<{ data: { title: string; body: string; type: string; confidence: number }[] }>("/insights"),
   memories: () =>
     fetchApi<{ data: { type: string; content: string; importance: number }[] }>("/memories"),
+  emotions: (days = 30) =>
+    fetchApi<{ data: { emotion: string; intensity: number; logged_at: string }[] }>(
+      `/philosophy/emotions?days=${days}`
+    ),
+  stoicStreak: (days = 30) =>
+    fetchApi<{ morning: number; evening: number; total: number }>(
+      `/philosophy/stoic/streak?days=${days}`
+    ),
+  dreamThemes: (days = 30) =>
+    fetchApi<{ words: { word: string; count: number }[] }>(`/philosophy/themes?days=${days}`),
 };

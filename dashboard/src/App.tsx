@@ -5,16 +5,18 @@ import {
   NutritionPage,
   InsightsPage,
   MemoriesPage,
+  PhilosophyPage,
   ConsistencyPage,
 } from "./pages/Dashboard";
 
-type Tab = "overview" | "nutrition" | "insights" | "memories" | "consistency";
+type Tab = "overview" | "nutrition" | "insights" | "memories" | "philosophy" | "consistency";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "nutrition", label: "Nutrition" },
   { id: "insights", label: "Insights" },
   { id: "memories", label: "Memories" },
+  { id: "philosophy", label: "Philosophy" },
   { id: "consistency", label: "Consistency" },
 ];
 
@@ -65,6 +67,7 @@ export default function App() {
       {tab === "nutrition" && <NutritionPage />}
       {tab === "insights" && <InsightsPage />}
       {tab === "memories" && <MemoriesPage />}
+      {tab === "philosophy" && <PhilosophyPage />}
       {tab === "consistency" && <ConsistencyPage />}
     </div>
   );

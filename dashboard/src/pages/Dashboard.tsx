@@ -134,6 +134,59 @@ export function MemoriesPage() {
   );
 }
 
+export function PhilosophyPage() {
+  const [emotions, setEmotions] = useState<{ emotion: string; intensity: number; logged_at: string }[]>([]);
+  const [stoic, setStoic] = useState<{ morning: number; evening: number; total: number } | null>(null);
+  const [themes, setThemes] = useState<{ word: string; count: number }[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([api.emotions(), api.stoicStreak(), api.dreamThemes()])
+      .then(([e, s, t]) => {
+        setEmotions(e.data);
+        setStoic(s);
+        setThemes(t.words);
+      })
+      .catch((err) => setError(err.message));
+  }, []);
+
+  if (error) return <div className="error">{error}</div>;
+
+  return (
+    <div className="grid">
+      <div className="card">
+        <h2>Emotion Check-ins</h2>
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={emotions}>
+            <XAxis
+              dataKey="logged_at"
+              tick={{ fill: "#8b93a7", fontSize: 10 }}
+              tickFormatter={(v) => String(v).slice(5, 10)}
+            />
+            <YAxis domain={[1, 10]} tick={{ fill: "#8b93a7", fontSize: 11 }} />
+            <Tooltip contentStyle={{ background: "#1a1d27", border: "1px solid #2a2f3d" }} />
+            <Line type="monotone" dataKey="intensity" stroke="#c084fc" dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="card">
+        <h2>Stoic Ritual Streak (30d)</h2>
+        <p>Morning: {stoic?.morning ?? 0} · Evening: {stoic?.evening ?? 0}</p>
+        <p>Total: {stoic?.total ?? 0}</p>
+      </div>
+      <div className="card">
+        <h2>Dream Theme Words</h2>
+        {themes.length === 0 && <p style={{ color: "var(--muted)" }}>No dream entries yet.</p>}
+        {themes.map((t) => (
+          <div key={t.word} className="memory-item">
+            {t.word} <span style={{ color: "var(--muted)" }}>({t.count})</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ConsistencyPage() {
   const [heatmap, setHeatmap] = useState<{ checkins: string[]; workouts: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);

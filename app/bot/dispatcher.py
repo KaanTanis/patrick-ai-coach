@@ -6,13 +6,17 @@ from app.bot.handlers import (
     chat,
     checkin,
     commands,
+    erasure,
     food,
     insights,
     memory,
     menu_buttons,
     personality,
+    philosophy_core,
+    psych,
     relapse,
     start,
+    stoic_ritual,
 )
 from app.bot.middlewares.auth import AuthMiddleware
 from app.bot.middlewares.db_session import DbSessionMiddleware
@@ -36,9 +40,13 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(menu_buttons.router)
     dp.include_router(checkin.router)
     dp.include_router(personality.router)
+    dp.include_router(philosophy_core.router)
+    dp.include_router(stoic_ritual.router)
+    dp.include_router(psych.router)
     dp.include_router(insights.router)
     dp.include_router(relapse.router)
     dp.include_router(memory.router)
+    dp.include_router(erasure.router)
     dp.include_router(food.router)
     dp.include_router(chat.router)
 

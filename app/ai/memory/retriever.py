@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.memory.ranker import cosine_similarity, rank_memories
 from app.ai.openai_client import get_openai_client
-from app.models import Memory, MemoryType
+from app.models import Memory
 from app.repositories import MemoryRepository
 
 logger = structlog.get_logger()

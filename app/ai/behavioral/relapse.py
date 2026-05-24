@@ -46,7 +46,7 @@ class RelapseRecovery:
         self.memories = MemoryRepository(session)
         self.smoking = SmokingEventRepository(session)
 
-    async def handle(self, user_id: int, message: str) -> str:
+    async def handle(self, user_id: int, message: str, personality_key: str = "companion") -> str:
         recent_relapse = await self.memories.get_recent_relapse(user_id, days=90)
         past_recovery = ""
         if recent_relapse:
@@ -74,7 +74,12 @@ class RelapseRecovery:
 {past_recovery}
 
 Kullanıcı mesajı: {message}
-
+"""
+        if personality_key.startswith("stoic"):
+            prompt += """
+Stoacı perspektif ekle: amor fati, kontrol ikiligi, eğitim olarak çerçevele.
+Marcus/Epiktetos tonunda kısa bir aforizma ekle."""
+        prompt += """
 Yapı: kabul et → normalleştir → kimliği ayır → bir mikro adım → isteğe bağlı nazik soru.
 150 kelimenin altında tut. Türkçe yaz."""
 

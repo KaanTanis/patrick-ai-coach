@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.behavioral.analyzer import BehavioralAnalyzer
 from app.ai.openai_client import get_openai_client
-from app.repositories import InsightRepository
+from app.repositories import InsightRepository, UserRepository
 
 logger = structlog.get_logger()
 
@@ -14,6 +14,21 @@ FLAG_PROMPTS = {
     "workout_inconsistency": "Son dönemde antrenman tutarlılığı düşük.",
     "recurring_relapse": "Son 30 günde birden fazla sigara relapsi tespit edildi.",
     "stress_eating_pattern": "Yüksek stresli günlerde kalori alımı artıyor.",
+    "weekend_vs_weekday_mood": "Hafta içi ve hafta sonu ruh hali farklı.",
+    "post_meal_energy_crash": "Öğün sonrası enerji düşüşü gözlemleniyor.",
+    "dream_stress_correlation": "Stresli günlerde rüya kaydı artıyor.",
+    "stoic_ritual_consistency": "Stoik ritüel pratiği tutarlı.",
+    "stoic_ritual_gap": "Stoik ritüel pratiği eksik.",
+    "emotion_stress_correlation": "Stresli günlerde duygu check-in sıklığı artıyor.",
+}
+
+LENS_TONE = {
+    "stoic": "Stoacı perspektif: kontrol ikiligi, erdem, pratik odaklı.",
+    "stoic_praxis": "Stoacı perspektif: kontrol ikiligi, erdem, pratik odaklı.",
+    "jungian": "Jung perspektifi: sembolik, arketipsel, meraklı.",
+    "jung_shadow": "Jung perspektifi: gölge, projeksiyon, sembolik.",
+    "therapist": "Bilişsel/duygusal perspektif: sıcak, yansıtıcı.",
+    "psych_cbt": "CBT perspektifi: düşünce-duygu-davranış zinciri.",
 }
 
 
@@ -22,6 +37,7 @@ class InsightGenerator:
         self.session = session
         self.analyzer = BehavioralAnalyzer(session)
         self.insights = InsightRepository(session)
+        self.users = UserRepository(session)
 
     async def generate(self, user_id: int) -> list[str]:
         recent_count = await self.insights.count_recent(user_id, days=7)
@@ -32,6 +48,10 @@ class InsightGenerator:
         if not flags:
             return []
 
+        user = await self.users.get_by_id(user_id)
+        personality = user.personality_key if user else "companion"
+        tone_hint = LENS_TONE.get(personality, "Kişisel koç perspektifi: sıcak ve pratik.")
+
         created: list[str] = []
         for flag in flags[:2]:
             flag_name = flag["flag"]
@@ -41,6 +61,7 @@ class InsightGenerator:
             prompt = f"""Kişisel koçluk uygulaması için bir davranış içgörüsü oluştur.
 Tespit edilen kalıp: {seed}
 Kanıt: {json.dumps(evidence)}
+Ton rehberi: {tone_hint}
 JSON anahtarları: title (kısa, Türkçe), body (2-3 cümle, sıcak, Türkçe), insight_type (correlation|trend|warning|celebration), confidence (0-1)."""
 
             response = await get_openai_client().chat(

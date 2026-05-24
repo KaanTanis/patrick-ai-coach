@@ -6,10 +6,14 @@ def test_turkish_commands_registered():
     assert "rapor" in commands
     assert "durum" in commands
     assert "mod" in commands
+    assert "lens" in commands
+    assert "analiz" in commands
+    assert "serbest" in commands
     assert "geri" in commands
     assert "iptal" in commands
     assert "yardim" in commands
     assert "hatirla" in commands
+    assert "sil" in commands
 
 
 def test_menu_buttons_turkish():

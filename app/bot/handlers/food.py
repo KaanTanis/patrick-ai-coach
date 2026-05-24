@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.food.vision_analyzer import FoodVisionAnalyzer
 from app.config import get_settings
+from app.repositories import MealRepository, UserRepository
 
 router = Router()
 settings = get_settings()
@@ -24,7 +25,17 @@ async def handle_food_photo(
     from pathlib import Path
     from uuid import uuid4
 
-    from app.repositories import UserRepository
+    users = UserRepository(session)
+    user = await users.get_or_create(message.from_user.id, message.from_user.full_name)
+
+    meals = MealRepository(session)
+    today_calls = await meals.count_today_vision_calls(user.id, user.timezone)
+    if today_calls >= settings.max_daily_vision_calls:
+        await message.answer(
+            f"Bugün {settings.max_daily_vision_calls} görsel analiz limitine ulaştın. "
+            "Yarın tekrar deneyebilirsin."
+        )
+        return
 
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     await message.answer("Yemeğini analiz ediyorum...")
@@ -38,9 +49,6 @@ async def handle_food_photo(
     settings.photo_storage_path.mkdir(parents=True, exist_ok=True)
     dest = settings.photo_storage_path / f"{uuid4().hex}.jpg"
     await bot.download_file(file.file_path, dest)
-
-    users = UserRepository(session)
-    user = await users.get_or_create(message.from_user.id, message.from_user.full_name)
 
     analyzer = FoodVisionAnalyzer(session)
     response = await analyzer.analyze(user.id, Path(dest))

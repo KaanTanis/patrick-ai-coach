@@ -7,7 +7,16 @@ from app.repositories import PersonalityRepository, UserRepository
 
 router = Router()
 
-PERSONALITY_KEYS = ["stoic", "therapist", "coach", "jungian", "companion"]
+PERSONALITY_KEYS = [
+    "stoic",
+    "stoic_praxis",
+    "therapist",
+    "psych_cbt",
+    "coach",
+    "jungian",
+    "jung_shadow",
+    "companion",
+]
 
 
 @router.message(Command("mod", "personality"))

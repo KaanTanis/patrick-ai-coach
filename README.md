@@ -98,6 +98,26 @@ Telegram → FastAPI webhook → aiogram handlers → AI Orchestrator
 | Weekly reflection | Sunday 18:00 |
 | Conversation cleanup | Daily 04:00 |
 
+## Production Deploy
+
+```bash
+cp .env.example .env
+# Set ENV=production, strong API_KEY, TELEGRAM_WEBHOOK_SECRET, ALLOWED_TELEGRAM_IDS
+
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Health checks:
+- `GET /health/live` — process up
+- `GET /health/ready` — Postgres + Redis + worker heartbeat
+- `GET /metrics` — Prometheus metrics
+
+Backup:
+```bash
+./scripts/backup.sh
+# Restores: psql < backup/database.sql
+```
+
 ## Security
 
 - Single-user allowlist via `ALLOWED_TELEGRAM_IDS`

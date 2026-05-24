@@ -1,11 +1,8 @@
-from datetime import date, datetime, timezone
-from unittest.mock import MagicMock
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-import pytest
 
-from app.ai.proactive.coach import OutreachDecision, evaluate_outreach, _in_sleep_window
-from app.config import get_settings
+from app.ai.proactive.coach import evaluate_outreach, _in_sleep_window
 from app.models import User
 
 

@@ -35,6 +35,7 @@ class MemoryType(StrEnum):
     RELAPSE = "relapse"
     SCHEDULE = "schedule"
     EPISODE = "episode"
+    SYMBOL = "symbol"
 
 
 class MemorySource(StrEnum):
@@ -70,6 +71,7 @@ class User(Base):
     last_proactive_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     nudges_today_count: Mapped[int] = mapped_column(SmallInteger, default=0)
     nudges_today_date: Mapped[date | None] = mapped_column(Date)
+    preferences: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     check_ins: Mapped[list["CheckIn"]] = relationship(back_populates="user")
@@ -79,6 +81,11 @@ class User(Base):
     conversations: Mapped[list["Conversation"]] = relationship(back_populates="user")
     memories: Mapped[list["Memory"]] = relationship(back_populates="user")
     insights: Mapped[list["BehavioralInsight"]] = relationship(back_populates="user")
+    dream_entries: Mapped[list["DreamEntry"]] = relationship(back_populates="user")
+    shadow_notes: Mapped[list["ShadowNote"]] = relationship(back_populates="user")
+    thought_records: Mapped[list["ThoughtRecord"]] = relationship(back_populates="user")
+    stoic_rituals: Mapped[list["StoicRitual"]] = relationship(back_populates="user")
+    emotion_checkins: Mapped[list["EmotionCheckin"]] = relationship(back_populates="user")
 
 
 class CheckIn(Base):
@@ -222,3 +229,83 @@ class PersonalityProfile(Base):
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     tone_rules: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+
+class DreamEntry(Base):
+    __tablename__ = "dream_entries"
+    __table_args__ = (Index("ix_dream_entries_user_logged", "user_id", "logged_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    symbols: Mapped[list[str] | None] = mapped_column(JSONB)
+    mood: Mapped[str | None] = mapped_column(String(100))
+    ai_interpretation: Mapped[str | None] = mapped_column(Text)
+    logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="dream_entries")
+
+
+class ShadowNote(Base):
+    __tablename__ = "shadow_notes"
+    __table_args__ = (Index("ix_shadow_notes_user_logged", "user_id", "logged_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    ai_reflection: Mapped[str | None] = mapped_column(Text)
+    logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="shadow_notes")
+
+
+class ThoughtRecord(Base):
+    __tablename__ = "thought_records"
+    __table_args__ = (Index("ix_thought_records_user_logged", "user_id", "logged_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    situation: Mapped[str | None] = mapped_column(Text)
+    automatic_thought: Mapped[str | None] = mapped_column(Text)
+    emotion: Mapped[str | None] = mapped_column(String(100))
+    emotion_intensity: Mapped[int | None] = mapped_column(SmallInteger)
+    evidence_for: Mapped[str | None] = mapped_column(Text)
+    evidence_against: Mapped[str | None] = mapped_column(Text)
+    balanced_thought: Mapped[str | None] = mapped_column(Text)
+    logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="thought_records")
+
+
+class StoicRitual(Base):
+    __tablename__ = "stoic_rituals"
+    __table_args__ = (Index("ix_stoic_rituals_user_type", "user_id", "ritual_type", "logged_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    ritual_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    control_items: Mapped[list[str] | None] = mapped_column(JSONB)
+    premeditatio: Mapped[str | None] = mapped_column(Text)
+    virtue_intention: Mapped[str | None] = mapped_column(Text)
+    evening_good: Mapped[str | None] = mapped_column(Text)
+    evening_hard: Mapped[str | None] = mapped_column(Text)
+    dichotomy_audit: Mapped[str | None] = mapped_column(Text)
+    tomorrow_intention: Mapped[str | None] = mapped_column(Text)
+    logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="stoic_rituals")
+
+
+class EmotionCheckin(Base):
+    __tablename__ = "emotion_checkins"
+    __table_args__ = (Index("ix_emotion_checkins_user_logged", "user_id", "logged_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    emotion: Mapped[str] = mapped_column(String(100), nullable=False)
+    intensity: Mapped[int | None] = mapped_column(SmallInteger)
+    body_sensation: Mapped[str | None] = mapped_column(Text)
+    ai_reflection: Mapped[str | None] = mapped_column(Text)
+    logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="emotion_checkins")

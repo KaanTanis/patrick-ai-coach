@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: tbot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tbot}
+      POSTGRES_DB: tbot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tbot -d tbot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      ENV: production
+      DATABASE_URL: postgresql+asyncpg://tbot:${POSTGRES_PASSWORD:-tbot}@postgres:5432/tbot
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - photo_data:/app/data/photos
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: arq app.jobs.worker.WorkerSettings
+    env_file:
+      - .env
+    environment:
+      ENV: production
+      DATABASE_URL: postgresql+asyncpg://tbot:${POSTGRES_PASSWORD:-tbot}@postgres:5432/tbot
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - photo_data:/app/data/photos
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  photo_data:

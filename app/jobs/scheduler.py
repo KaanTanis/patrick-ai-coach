@@ -21,5 +21,7 @@ def build_cron_jobs(task_functions: dict) -> list:
         cron(task_functions["decay_memory_importance"], weekday=0, hour=3, minute=0),
         cron(task_functions["consolidate_memories_task"], hour=2, minute=30),
         cron(task_functions["generate_weekly_reflection"], weekday=6, hour=18, minute=0),
+        cron(task_functions["generate_monthly_archetype"], day=1, hour=18, minute=0),
         cron(task_functions["cleanup_old_conversations"], hour=4, minute=0),
+        cron(task_functions["cleanup_old_photos"], hour=4, minute=30),
     ]

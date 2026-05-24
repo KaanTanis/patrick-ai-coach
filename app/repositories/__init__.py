@@ -303,6 +303,29 @@ class MealRepository:
         )
         return result.scalar_one()
 
+    async def count_today_vision_calls(self, user_id: int, timezone: str = "Europe/Istanbul") -> int:
+        from zoneinfo import ZoneInfo
+
+        try:
+            tz = ZoneInfo(timezone)
+        except Exception:
+            tz = ZoneInfo("Europe/Istanbul")
+
+        now_local = datetime.now(tz)
+        today = now_local.date()
+        start = datetime.combine(today, datetime.min.time()).replace(tzinfo=tz)
+        end = start + timedelta(days=1)
+
+        result = await self.session.execute(
+            select(func.count(Meal.id)).where(
+                Meal.user_id == user_id,
+                Meal.photo_path.isnot(None),
+                Meal.logged_at >= start,
+                Meal.logged_at < end,
+            )
+        )
+        return result.scalar_one()
+
     async def get_today_stats(self, user_id: int, timezone: str = "Europe/Istanbul") -> dict[str, Any]:
         from zoneinfo import ZoneInfo
 

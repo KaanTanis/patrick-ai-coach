@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 from statistics import mean
 from typing import Any
 
@@ -6,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import SmokingEventType
 from app.repositories import CheckInRepository, MealRepository, SmokingEventRepository, WorkoutRepository
+from app.repositories.philosophy import DreamRepository, EmotionRepository, StoicRitualRepository
 
 
 def _avg(values: list[float | int | None]) -> float | None:
@@ -20,6 +20,9 @@ class BehavioralAnalyzer:
         self.meals = MealRepository(session)
         self.smoking = SmokingEventRepository(session)
         self.workouts = WorkoutRepository(session)
+        self.dreams = DreamRepository(session)
+        self.emotions = EmotionRepository(session)
+        self.stoic = StoicRitualRepository(session)
 
     async def detect_patterns(self, user_id: int) -> list[dict[str, Any]]:
         checkins = await self.check_ins.get_recent(user_id, days=30)
@@ -105,5 +108,80 @@ class BehavioralAnalyzer:
                             },
                         }
                     )
+
+        weekday_mood = _avg([c.mood for c in checkins if c.mood and c.date.weekday() < 5])
+        weekend_mood = _avg([c.mood for c in checkins if c.mood and c.date.weekday() >= 5])
+        if weekday_mood and weekend_mood and abs(weekday_mood - weekend_mood) >= 2:
+            flags.append(
+                {
+                    "flag": "weekend_vs_weekday_mood",
+                    "evidence": {
+                        "weekday_avg_mood": round(weekday_mood, 1),
+                        "weekend_avg_mood": round(weekend_mood, 1),
+                    },
+                }
+            )
+
+        meal_dates = {m.logged_at.date() for m in meals}
+        post_meal_low_energy = 0
+        for c in checkins:
+            if c.date in meal_dates and c.energy and c.energy <= 4:
+                post_meal_low_energy += 1
+        if post_meal_low_energy >= 3:
+            flags.append(
+                {
+                    "flag": "post_meal_energy_crash",
+                    "evidence": {"low_energy_meal_days": post_meal_low_energy},
+                }
+            )
+
+        dream_list = await self.dreams.get_recent(user_id, days=30, limit=10)
+        if dream_list and high_stress:
+            stress_dates = {c.date for c in high_stress}
+            dream_stress_days = sum(
+                1 for d in dream_list if d.logged_at.date() in stress_dates
+            )
+            if dream_stress_days >= 2:
+                flags.append(
+                    {
+                        "flag": "dream_stress_correlation",
+                        "evidence": {
+                            "dreams_on_stress_days": dream_stress_days,
+                            "total_dreams": len(dream_list),
+                        },
+                    }
+                )
+
+        ritual_counts = await self.stoic.count_recent_by_type(user_id, days=7)
+        morning = ritual_counts.get("morning", 0)
+        evening = ritual_counts.get("evening", 0)
+        if morning + evening >= 3:
+            flags.append(
+                {
+                    "flag": "stoic_ritual_consistency",
+                    "evidence": {"morning": morning, "evening": evening, "days": 7},
+                }
+            )
+        elif morning + evening == 0 and len(checkins) >= 7:
+            flags.append(
+                {
+                    "flag": "stoic_ritual_gap",
+                    "evidence": {"rituals_last_7_days": 0},
+                }
+            )
+
+        emotion_entries = await self.emotions.get_recent(user_id, days=14, limit=20)
+        if emotion_entries and high_stress:
+            high_stress_emotions = [
+                e for e in emotion_entries
+                if any(c.stress and c.stress >= 7 and c.date == e.logged_at.date() for c in checkins)
+            ]
+            if len(high_stress_emotions) >= 3:
+                flags.append(
+                    {
+                        "flag": "emotion_stress_correlation",
+                        "evidence": {"stress_day_emotions": len(high_stress_emotions)},
+                    }
+                )
 
         return flags

@@ -7,12 +7,12 @@ from app.ai.prompt_composer import PromptComposer
 @pytest.mark.asyncio
 async def test_compose_includes_core_identity():
     session = AsyncMock()
-    repo_mock = AsyncMock()
-    repo_mock.get = AsyncMock(return_value=None)
+    profile = MagicMock()
+    profile.system_prompt = "Be warm."
+    profile.tone_rules = {"voice": "calm"}
 
-    with patch.object(PromptComposer, "_get_personality_prompt", new=AsyncMock(return_value="Be warm.")):
+    with patch.object(PromptComposer, "_get_personality", new=AsyncMock(return_value=profile)):
         composer = PromptComposer(session)
-        composer.personalities = repo_mock
 
         user = MagicMock()
         user.personality_key = "companion"

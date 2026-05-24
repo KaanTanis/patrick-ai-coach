@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db_session, verify_api_key
+from app.api.user_lookup import get_primary_user
 from app.repositories import InsightRepository, UserRepository
 
 router = APIRouter(prefix="/insights", tags=["insights"], dependencies=[Depends(verify_api_key)])
@@ -14,19 +15,16 @@ async def list_insights(
 ):
     from sqlalchemy import select
 
-    from app.models import BehavioralInsight, User
+    from app.models import BehavioralInsight
 
-    result = await session.execute(select(User).limit(1))
-    user = result.scalar_one_or_none()
+    user = await get_primary_user(session, UserRepository(session))
     if not user:
         return {"data": []}
 
     repo = InsightRepository(session)
     if include_dismissed:
-        from sqlalchemy import select as sa_select
-
         res = await session.execute(
-            sa_select(BehavioralInsight)
+            select(BehavioralInsight)
             .where(BehavioralInsight.user_id == user.id)
             .order_by(BehavioralInsight.surfaced_at.desc())
             .limit(50)
