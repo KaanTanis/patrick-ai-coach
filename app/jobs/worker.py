@@ -152,6 +152,7 @@ async def generate_monthly_archetype(ctx: dict) -> None:
     from aiogram import Bot
 
     from app.ai.openai_client import get_openai_client
+    from app.ai.philosophy.helpers import filter_archetype_episodes
     from app.models import MemorySource, MemoryType
     from app.repositories import MemoryRepository
     from app.repositories.philosophy import DreamRepository, ShadowRepository
@@ -167,17 +168,20 @@ async def generate_monthly_archetype(ctx: dict) -> None:
         for user in users:
             dreams = await dreams_repo.get_recent(user.id, days=30, limit=20)
             shadows = await shadows_repo.get_recent(user.id, days=30, limit=20)
-            if not dreams and not shadows:
+            episodes = await mem_repo.get_recent_episodes(user.id, days=30, limit=15)
+            episode_texts = filter_archetype_episodes(episodes)
+            if not dreams and not shadows and not episode_texts:
                 continue
 
             dream_texts = [d.content[:120] for d in dreams]
             shadow_texts = [s.content[:120] for s in shadows]
 
             prompt = f"""Jung perspektifinden aylık arketip özeti yaz.
-Teşhis yok, kehanet yok. Yargılayıcı olma. 200 kelime altı Türkçe.
+Teşhis yok, kehanet yok. Destekleyici ve meraklı ol. 200 kelime altı Türkçe.
 
 Rüyalar: {dream_texts}
 Gölge notları: {shadow_texts}
+Episodik özetler: {episode_texts}
 
 "Baskın temalar: ..." formatında bitir."""
 

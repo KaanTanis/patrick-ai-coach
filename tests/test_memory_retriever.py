@@ -34,7 +34,7 @@ def test_rank_memories_prioritizes_goals_for_relapse_intent():
     memories = [
         _make_memory("likes coffee", "fact", 0.3, [0.9, 0.1]),
         _make_memory("stress trigger evenings", "trigger", 0.8, [0.5, 0.5]),
-        _make_memory("quit smoking", "goal", 0.9, [0.1, 0.9]),
+        _make_memory("spor hedefi", "goal", 0.9, [0.1, 0.9]),
     ]
     ranked = rank_memories(memories, query, "relapse", limit=2)
     types = [m.memory_type for m in ranked]

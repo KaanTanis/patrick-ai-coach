@@ -23,10 +23,6 @@ export const api = {
     fetchApi<{ data: Record<string, unknown>[] }>(`/metrics/checkins?days=${days}`),
   calories: (days = 30) =>
     fetchApi<{ data: { date: string; calories: number }[] }>(`/metrics/calories?days=${days}`),
-  smoking: (days = 30) =>
-    fetchApi<{ cravings: { date: string; level: number }[]; events: unknown[] }>(
-      `/metrics/smoking?days=${days}`
-    ),
   heatmap: (days = 90) =>
     fetchApi<{ checkins: string[]; workouts: string[] }>(`/metrics/consistency/heatmap?days=${days}`),
   insights: () => fetchApi<{ data: { title: string; body: string; type: string; confidence: number }[] }>("/insights"),

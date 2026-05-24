@@ -7,7 +7,6 @@ class CheckInCreate(BaseModel):
     mood: int | None = Field(None, ge=1, le=10)
     sleep_quality: int | None = Field(None, ge=1, le=10)
     energy: int | None = Field(None, ge=1, le=10)
-    smoking_craving: int | None = Field(None, ge=1, le=10)
     workout_done: bool | None = None
     workout_type: str | None = None
     stress: int | None = Field(None, ge=1, le=10)

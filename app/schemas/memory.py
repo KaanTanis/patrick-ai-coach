@@ -5,7 +5,9 @@ from pydantic import BaseModel, Field
 
 class ExtractedMemoryItem(BaseModel):
     content: str
-    memory_type: Literal["fact", "trigger", "pattern", "goal", "relapse", "schedule", "episode"] = "fact"
+    memory_type: Literal[
+        "fact", "trigger", "pattern", "goal", "relapse", "schedule", "episode", "reminder"
+    ] = "fact"
     importance: float = Field(default=0.5, ge=0.0, le=1.0)
 
 

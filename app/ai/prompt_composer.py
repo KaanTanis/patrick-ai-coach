@@ -5,7 +5,7 @@ import yaml
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.context.bundle import ContextBundle, ContextBuilder
-from app.ai.personalities.base import CORE_IDENTITY, RELAPSE_GUARDRAILS
+from app.ai.personalities.base import CORE_IDENTITY, SETBACK_GUARDRAILS
 from app.ai.personalities.lenses import CRISIS_KEYWORDS, CRISIS_RESPONSE, FREE_MODE_ADDENDUM
 from app.config import get_settings
 from app.models import CheckIn, Conversation, Memory, User
@@ -14,6 +14,14 @@ from app.services.lens import lens_prompt
 
 settings = get_settings()
 TEMPLATES_DIR = Path(__file__).parent / "personalities" / "templates"
+
+
+CONTEXTUAL_QUESTION_ADDENDUM = """
+Profil boşlukları: {gaps}
+Yanıtının sonunda, kullanıcıyı daha iyi tanımak için TEK açık uçlu soru sor.
+Soru kalıbını her seferinde değiştir. Zorunlu değilse bile meraklı ve kısa olsun.
+Kullanıcı "bu kadar soru yeter" derse soru sorma.
+"""
 
 
 class PromptComposer:
@@ -76,6 +84,8 @@ class PromptComposer:
         relapse_context: bool = False,
         active_lens: str | None = None,
         free_mode: bool = False,
+        ask_contextual_question: bool = False,
+        profile_gaps: list[str] | None = None,
     ) -> list[dict[str, str]]:
         user = bundle.user
         profile = await self._get_personality(user.personality_key)
@@ -108,14 +118,20 @@ class PromptComposer:
             self._format_memories(bundle.memories),
             "--- Son check-in'ler (7 gün) ---",
             bundle.checkin_snapshot,
+            "--- Son felsefi kayıtlar (rüya/gölge/düşünce) ---",
+            bundle.philosophy_snapshot,
             "--- Bugünkü öğünler ---",
             bundle.today_meals_text,
         ]
 
         if free_mode:
             system_parts.append(FREE_MODE_ADDENDUM)
+        if ask_contextual_question and profile_gaps:
+            system_parts.append(
+                CONTEXTUAL_QUESTION_ADDENDUM.format(gaps=", ".join(profile_gaps))
+            )
         if relapse_context:
-            system_parts.append(RELAPSE_GUARDRAILS)
+            system_parts.append(SETBACK_GUARDRAILS)
         system_parts.append(f"Prompt version: {settings.prompt_version}")
 
         messages: list[dict[str, str]] = [
@@ -155,6 +171,7 @@ class PromptComposer:
             episodic_summaries=[],
             checkin_snapshot=self._format_checkins(checkins),
             today_meals_text="",
+            philosophy_snapshot="",
             recent_history=self._format_history(history),
         )
         return await self.compose_from_bundle(
@@ -167,7 +184,7 @@ class PromptComposer:
         prompt = f"""Kullanıcı için sıcak bir günlük check-in yanıtı oluştur.
 Bugünkü veriler: {checkin_data}
 7 günlük ortalamalar: {averages}
-Format: kabul + bir gözlem + bir mikro eylem. 100 kelimenin altında. Utandırma yok.
+Format: kabul + bir gözlem + bir mikro eylem. 100 kelimenin altında.
 Yanıtı Türkçe yaz."""
         return await self._mini_chat(prompt)
 

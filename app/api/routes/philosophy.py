@@ -68,6 +68,11 @@ async def get_monthly_themes(
     words: Counter[str] = Counter()
     stop = {"ve", "bir", "için", "ile", "de", "da", "the", "a", "an", "in", "on", "ben", "çok", "gibi"}
     for entry in entries:
+        if entry.symbols:
+            for symbol in entry.symbols:
+                cleaned = str(symbol).strip().lower()
+                if len(cleaned) > 2 and cleaned not in stop:
+                    words[cleaned] += 2
         for word in entry.content.lower().split():
             cleaned = word.strip(".,!?;:\"'()[]")
             if len(cleaned) > 3 and cleaned not in stop:

@@ -36,18 +36,13 @@ class MemoryType(StrEnum):
     SCHEDULE = "schedule"
     EPISODE = "episode"
     SYMBOL = "symbol"
+    REMINDER = "reminder"
 
 
 class MemorySource(StrEnum):
     EXTRACTED = "extracted"
     MANUAL = "manual"
     ANALYSIS = "analysis"
-
-
-class SmokingEventType(StrEnum):
-    CRAVING = "craving"
-    RELAPSE = "relapse"
-    RESISTED = "resisted"
 
 
 class InsightType(StrEnum):
@@ -76,7 +71,6 @@ class User(Base):
 
     check_ins: Mapped[list["CheckIn"]] = relationship(back_populates="user")
     meals: Mapped[list["Meal"]] = relationship(back_populates="user")
-    smoking_events: Mapped[list["SmokingEvent"]] = relationship(back_populates="user")
     workouts: Mapped[list["Workout"]] = relationship(back_populates="user")
     conversations: Mapped[list["Conversation"]] = relationship(back_populates="user")
     memories: Mapped[list["Memory"]] = relationship(back_populates="user")
@@ -101,7 +95,6 @@ class CheckIn(Base):
     mood: Mapped[int | None] = mapped_column(SmallInteger)
     sleep_quality: Mapped[int | None] = mapped_column(SmallInteger)
     energy: Mapped[int | None] = mapped_column(SmallInteger)
-    smoking_craving: Mapped[int | None] = mapped_column(SmallInteger)
     workout_done: Mapped[bool | None] = mapped_column(Boolean)
     workout_type: Mapped[str | None] = mapped_column(Text)
     stress: Mapped[int | None] = mapped_column(SmallInteger)
@@ -128,20 +121,6 @@ class Meal(Base):
     logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="meals")
-
-
-class SmokingEvent(Base):
-    __tablename__ = "smoking_events"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    event_type: Mapped[str] = mapped_column(String(20), nullable=False)
-    intensity: Mapped[int | None] = mapped_column(SmallInteger)
-    trigger_note: Mapped[str | None] = mapped_column(Text)
-    context: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
-    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    user: Mapped["User"] = relationship(back_populates="smoking_events")
 
 
 class Workout(Base):

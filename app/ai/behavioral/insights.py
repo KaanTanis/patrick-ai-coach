@@ -9,10 +9,11 @@ from app.repositories import InsightRepository, UserRepository
 logger = structlog.get_logger()
 
 FLAG_PROMPTS = {
-    "stress_smoking_correlation": "Yüksek stresli günlerde sigara isteği artıyor.",
+    "stress_mood_correlation": "Yüksek stresli günlerde ruh hali belirgin şekilde düşüyor.",
     "sleep_motivation_link": "Kötü uyku kalitesinden sonra motivasyon düşüyor.",
     "workout_inconsistency": "Son dönemde antrenman tutarlılığı düşük.",
-    "recurring_relapse": "Son 30 günde birden fazla sigara relapsi tespit edildi.",
+    "recurring_setback": "Son dönemde birden fazla gerileme kaydı var.",
+    "reminder_followup": "Kayıtlı hatırlatmalar var ama son günlerde konuşulmamış.",
     "stress_eating_pattern": "Yüksek stresli günlerde kalori alımı artıyor.",
     "weekend_vs_weekday_mood": "Hafta içi ve hafta sonu ruh hali farklı.",
     "post_meal_energy_crash": "Öğün sonrası enerji düşüşü gözlemleniyor.",

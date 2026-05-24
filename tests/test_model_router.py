@@ -10,8 +10,8 @@ def test_long_message_uses_full_model():
     assert pick_chat_model(text, "free_chat") == "gpt-4o"
 
 
-def test_relapse_uses_full_model():
-    assert pick_chat_model("sigara içtim", "relapse") == "gpt-4o"
+def test_setback_uses_full_model():
+    assert pick_chat_model("geriledim", "setback") == "gpt-4o"
 
 
 def test_complex_question_uses_full_model():

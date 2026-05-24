@@ -26,7 +26,6 @@ async def test_export_includes_checksum_and_profile():
     with (
         patch("app.services.export.CheckInRepository") as ci,
         patch("app.services.export.MealRepository") as meal,
-        patch("app.services.export.SmokingEventRepository") as smoke,
         patch("app.services.export.WorkoutRepository") as workout,
         patch("app.services.export.ConversationRepository") as conv,
         patch("app.services.export.MemoryRepository") as mem,
@@ -39,7 +38,6 @@ async def test_export_includes_checksum_and_profile():
     ):
         ci.return_value.get_recent = empty
         meal.return_value.get_recent = empty
-        smoke.return_value.get_recent = empty
         workout.return_value.get_recent = empty
         conv.return_value.get_recent = empty
         mem.return_value.list_all = empty

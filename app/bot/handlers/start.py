@@ -10,12 +10,13 @@ router = Router()
 
 WELCOME_TEXT = (
     "Merhaba. Ben senin kişisel AI koçunum.\n\n"
-    "Kalıplarını hatırlarım, utandırmadan toparlanmana destek olurum ve "
+    "Kalıplarını hatırlarım, zorlandığında yanında olurum ve "
     "günden güne tutarlılık kurmana yardım ederim.\n\n"
     "Komutlar:\n"
     "/rapor — günlük durum raporu\n"
     "/durum — davranış içgörüleri\n"
     "/mod — koç tarzını değiştir\n"
+    "/hatirla — seni ne kadar tanıdığım\n"
     "/veriler — verilerini indir\n"
     "/unut — hafızayı temizle\n"
     "/yardim — komut listesi\n\n"

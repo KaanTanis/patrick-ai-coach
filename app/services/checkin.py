@@ -36,7 +36,6 @@ class CheckInService:
             "mood": check_in.mood,
             "sleep_quality": check_in.sleep_quality,
             "energy": check_in.energy,
-            "smoking_craving": check_in.smoking_craving,
             "workout_done": check_in.workout_done,
             "stress": check_in.stress,
             "weight": float(check_in.weight) if check_in.weight else None,
@@ -57,7 +56,6 @@ class CheckInService:
             "mood",
             "sleep_quality",
             "energy",
-            "smoking_craving",
             "stress",
             "motivation",
         ]

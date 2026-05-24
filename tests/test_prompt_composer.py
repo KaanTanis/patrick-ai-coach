@@ -16,7 +16,7 @@ async def test_compose_includes_core_identity():
 
         user = MagicMock()
         user.personality_key = "companion"
-        user.goals = {"smoking": "quit"}
+        user.goals = {"fitness": "run 3x week"}
         user.timezone = "Europe/Istanbul"
         user.context_summary = None
         user.schedule = None
@@ -30,5 +30,5 @@ async def test_compose_includes_core_identity():
         )
 
     assert messages[0]["role"] == "system"
-    assert "Asla utandırma" in messages[0]["content"]
+    assert "baskı" in messages[0]["content"] or "suçluluk" in messages[0]["content"]
     assert messages[-1]["content"] == "Hello"

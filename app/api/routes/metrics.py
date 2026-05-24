@@ -50,7 +50,6 @@ async def get_checkin_metrics(
                 "mood": c.mood,
                 "sleep_quality": c.sleep_quality,
                 "energy": c.energy,
-                "smoking_craving": c.smoking_craving,
                 "stress": c.stress,
                 "motivation": c.motivation,
                 "workout_done": c.workout_done,
@@ -82,40 +81,6 @@ async def get_calorie_metrics(
         daily[key] = daily.get(key, 0) + meal.estimated_calories
 
     return {"data": [{"date": k, "calories": v} for k, v in sorted(daily.items())]}
-
-
-@router.get("/smoking")
-async def get_smoking_metrics(
-    days: int = Query(30, ge=1, le=365),
-    session: AsyncSession = Depends(get_db_session),
-):
-    from app.repositories import SmokingEventRepository
-
-    users = UserRepository(session)
-    smoking = SmokingEventRepository(session)
-    checkins = CheckInRepository(session)
-    user = await get_primary_user(session, users)
-    if not user:
-        return {"data": []}
-
-    recent_checkins = await checkins.get_recent(user.id, days=days)
-    events = await smoking.get_recent(user.id, days=days)
-
-    return {
-        "cravings": [
-            {"date": str(c.date), "level": c.smoking_craving}
-            for c in sorted(recent_checkins, key=lambda x: x.date)
-            if c.smoking_craving is not None
-        ],
-        "events": [
-            {
-                "type": e.event_type,
-                "intensity": e.intensity,
-                "occurred_at": e.occurred_at.isoformat(),
-            }
-            for e in events
-        ],
-    }
 
 
 @router.get("/consistency/heatmap")

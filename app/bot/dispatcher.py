@@ -14,7 +14,7 @@ from app.bot.handlers import (
     personality,
     philosophy_core,
     psych,
-    relapse,
+    setback,
     start,
     stoic_ritual,
 )
@@ -44,7 +44,7 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(stoic_ritual.router)
     dp.include_router(psych.router)
     dp.include_router(insights.router)
-    dp.include_router(relapse.router)
+    dp.include_router(setback.router)
     dp.include_router(memory.router)
     dp.include_router(erasure.router)
     dp.include_router(food.router)

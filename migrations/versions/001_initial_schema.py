@@ -48,7 +48,6 @@ def upgrade() -> None:
         sa.Column("mood", sa.SmallInteger()),
         sa.Column("sleep_quality", sa.SmallInteger()),
         sa.Column("energy", sa.SmallInteger()),
-        sa.Column("smoking_craving", sa.SmallInteger()),
         sa.Column("workout_done", sa.Boolean()),
         sa.Column("workout_type", sa.Text()),
         sa.Column("stress", sa.SmallInteger()),
@@ -72,17 +71,6 @@ def upgrade() -> None:
         sa.Column("ai_analysis", sa.Text()),
         sa.Column("raw_vision", sa.dialects.postgresql.JSONB()),
         sa.Column("logged_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-    )
-
-    op.create_table(
-        "smoking_events",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("event_type", sa.String(20), nullable=False),
-        sa.Column("intensity", sa.SmallInteger()),
-        sa.Column("trigger_note", sa.Text()),
-        sa.Column("context", sa.dialects.postgresql.JSONB()),
-        sa.Column("occurred_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     op.create_table(
@@ -154,7 +142,6 @@ def downgrade() -> None:
     op.drop_table("memories")
     op.drop_table("conversations")
     op.drop_table("workouts")
-    op.drop_table("smoking_events")
     op.drop_table("meals")
     op.drop_table("check_ins")
     op.drop_table("personality_profiles")

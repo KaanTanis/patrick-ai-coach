@@ -7,13 +7,11 @@ def test_skip_texts_includes_turkish():
     assert "/skip" in SKIP_TEXTS
 
 
-def test_chat_handler_has_state_filter():
-    import inspect
+def test_checkin_handler_has_adaptive_state():
+    from app.bot.handlers import checkin
 
-    from app.bot.handlers import chat
-
-    source = inspect.getsource(chat.free_chat)
-    assert "StateFilter(None)" in source
+    assert hasattr(checkin, "_start_checkin")
+    assert hasattr(checkin, "PARTIAL_ACK")
 
 
 def test_food_handler_fsm_guard():

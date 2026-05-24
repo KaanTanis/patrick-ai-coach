@@ -9,7 +9,7 @@ def test_turkish_commands_registered():
     assert "lens" in commands
     assert "analiz" in commands
     assert "serbest" in commands
-    assert "geri" in commands
+    assert "zor" in commands
     assert "iptal" in commands
     assert "yardim" in commands
     assert "hatirla" in commands

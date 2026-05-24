@@ -1,6 +1,6 @@
 # Personal AI Self-Improvement Assistant (tbot)
 
-A private Telegram-based AI coach for motivation, discipline, diet tracking, smoking cessation, workout consistency, and behavioral pattern analysis.
+A private Telegram-based AI coach for motivation, discipline, diet tracking, workout consistency, Jung/Stoic/CBT reflection, and behavioral pattern analysis. Goals and reminders come from what you tell the bot — not from built-in habit trackers.
 
 ## Stack
 
@@ -12,118 +12,61 @@ A private Telegram-based AI coach for motivation, discipline, diet tracking, smo
 
 ## Quick Start
 
-### 1. Configure environment
-
 ```bash
 cp .env.example .env
-# Edit .env with your TELEGRAM_BOT_TOKEN, OPENAI_API_KEY, ALLOWED_TELEGRAM_IDS
-```
-
-### 2. Start services
-
-```bash
 docker compose up -d postgres redis
 pip install -e ".[dev]"
 alembic upgrade head
 python scripts/seed_personalities.py
 ```
 
-### 3. Run the app
-
 ```bash
 uvicorn app.main:app --reload
 arq app.jobs.worker.WorkerSettings  # separate terminal
 ```
 
-### 4. Set Telegram webhook
-
-```bash
-# Production
-curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://your-domain.com/webhook/telegram&secret_token=<SECRET>"
-
-# Local dev with ngrok
-chmod +x scripts/dev_webhook.sh
-./scripts/dev_webhook.sh
-```
+See [LOCAL_START.md](LOCAL_START.md) for ngrok workflow.
 
 ## Telegram Commands
 
 | Command | Description |
 |---------|-------------|
-| `/start` | Welcome and setup |
-| `/checkin` | Daily 8-metric check-in |
-| `/insights` | Behavioral pattern insights |
-| `/personality <key>` | Switch coach style (stoic, therapist, coach, jungian, companion) |
-| `/relapse` | Report setback (shame-free recovery) |
-| `/food` | Log meal via photo |
-| `/export` | Download all data as JSON |
-| `/forget [type]` | Clear AI memories |
+| `/basla` | Welcome and setup |
+| `/rapor` | Adaptive daily check-in (questions vary by context) |
+| `/durum` | Behavioral insights |
+| `/mod <key>` | Personality mode (8 options) |
+| `/lens jung\|stoic\|psych` | One-shot lens for next message |
+| `/ruya`, `/golge`, `/sabah`, `/aksam`, `/dusunce`, `/duygu` | Philosophy / CBT flows |
+| `/analiz` | Deep multi-lens analysis |
+| `/serbest ac\|kapa` | Free mode (longer replies, no nudges) |
+| `/zor` | Report a hard moment or setback |
+| `/hatirla` | What the bot remembers (goals and reminders included) |
+| `/veriler`, `/unut`, `/sil` | Export, forget, erase |
+| `/iptal` | Cancel active flow |
 
-Free-form chat uses the full AI orchestrator with memory retrieval.
+During `/rapor` or chat, say **"bu kadar soru yeter"** to save partial answers and stop.
 
-## Dashboard
+Free-form chat uses memory retrieval. Tell the bot your goals and reminders — it remembers and may nudge you later.
 
-```bash
-cd dashboard && npm install && npm run dev
-# API proxied to localhost:8000 — enter API_KEY from .env
-```
+## Personality Modes (8)
 
-Build for production:
-
-```bash
-cd dashboard && npm run build
-# FastAPI serves dashboard/dist when present
-```
+| Key | Focus |
+|-----|-------|
+| `companion` | Warm daily companion |
+| `coach` | Action-oriented coaching |
+| `stoic` / `stoic_praxis` | Stoic philosophy and practice |
+| `jungian` / `jung_shadow` | Jungian symbolic exploration |
+| `therapist` / `psych_cbt` | CBT-informed support (not clinical therapy) |
 
 ## Architecture
 
 ```
-Telegram → FastAPI webhook → aiogram handlers → AI Orchestrator
-                                                      ↓
-                              Memory Retriever ← PostgreSQL + pgvector
-                                                      ↓
-                              Prompt Composer → OpenAI → Response
-                                                      ↓
-                              ARQ jobs (extraction, insights, summaries)
+Telegram → FastAPI → aiogram → AI Orchestrator → OpenAI
+                    ↓
+              PostgreSQL + pgvector (memories, check-ins)
+                    ↓
+              ARQ jobs (insights, reminders, summaries)
 ```
-
-## Background Jobs
-
-| Job | Schedule |
-|-----|----------|
-| Session summarization | Every 6h |
-| Behavioral analysis | Daily 06:00 |
-| Check-in nudge | Daily (configurable hour) |
-| Memory importance decay | Weekly |
-| Weekly reflection | Sunday 18:00 |
-| Conversation cleanup | Daily 04:00 |
-
-## Production Deploy
-
-```bash
-cp .env.example .env
-# Set ENV=production, strong API_KEY, TELEGRAM_WEBHOOK_SECRET, ALLOWED_TELEGRAM_IDS
-
-docker compose -f docker-compose.prod.yml up -d --build
-```
-
-Health checks:
-- `GET /health/live` — process up
-- `GET /health/ready` — Postgres + Redis + worker heartbeat
-- `GET /metrics` — Prometheus metrics
-
-Backup:
-```bash
-./scripts/backup.sh
-# Restores: psql < backup/database.sql
-```
-
-## Security
-
-- Single-user allowlist via `ALLOWED_TELEGRAM_IDS`
-- Webhook secret token validation
-- Dashboard protected by `API_KEY` header
-- Self-hosted — your data stays on your infrastructure
 
 ## License
 

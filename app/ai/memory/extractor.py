@@ -11,7 +11,9 @@ logger = structlog.get_logger()
 
 EXTRACTION_PROMPT = """Bu konuşma alışverişini analiz et ve kullanıcı hakkında kalıcı hafızalar çıkar.
 Sadece haftalar/aylar boyunca kişisel koça yardımcı olacak bilgileri çıkar.
-Türler: fact, trigger, pattern, goal, relapse, schedule, episode
+Türler: fact, trigger, pattern, goal, relapse, schedule, episode, reminder
+reminder: kullanıcının açıkça hatırlatmak istediği şeyler ("bana X hatırlat", taahhütler)
+goal: uzun vadeli hedefler (kullanıcının kendi söyledikleri — sigara vb. özellik değil, hedef olarak kaydet)
 schedule: vardiya saatleri, uyku penceresi, iş programı, aktif saatler
 episode: önemli bir olay/dönem özeti (nadir, yüksek değerli)
 Kalıcı bir şey yoksa boş liste dön.
@@ -58,6 +60,8 @@ class MemoryExtractor:
 
             if memory_type == MemoryType.RELAPSE or memory_type == MemoryType.TRIGGER:
                 importance = max(importance, 0.7)
+            if memory_type in {MemoryType.GOAL, MemoryType.REMINDER}:
+                importance = max(importance, 0.8)
             if memory_type == MemoryType.SCHEDULE:
                 importance = max(importance, 0.85)
             if memory_type == MemoryType.EPISODE:

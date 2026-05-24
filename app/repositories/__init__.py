@@ -15,7 +15,6 @@ from app.models import (
     MemoryEmbedding,
     MemoryType,
     PersonalityProfile,
-    SmokingEvent,
     User,
     Workout,
 )
@@ -205,6 +204,18 @@ class MemoryRepository:
         )
         return list(result.scalars().all())
 
+    async def get_reminders(self, user_id: int, limit: int = 5) -> list[Memory]:
+        result = await self.session.execute(
+            select(Memory)
+            .where(
+                Memory.user_id == user_id,
+                Memory.memory_type.in_([MemoryType.GOAL, MemoryType.REMINDER]),
+            )
+            .order_by(Memory.importance.desc(), Memory.created_at.desc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
     async def get_recent_relapse(self, user_id: int, days: int = 14) -> Memory | None:
         since = datetime.utcnow() - timedelta(days=days)
         result = await self.session.execute(
@@ -218,6 +229,17 @@ class MemoryRepository:
             .limit(1)
         )
         return result.scalar_one_or_none()
+
+    async def count_recent_setbacks(self, user_id: int, days: int = 30) -> int:
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        result = await self.session.execute(
+            select(func.count(Memory.id)).where(
+                Memory.user_id == user_id,
+                Memory.memory_type == MemoryType.RELAPSE,
+                Memory.created_at >= since,
+            )
+        )
+        return int(result.scalar_one())
 
     async def list_all(
         self, user_id: int, memory_type: str | None = None, search: str | None = None
@@ -375,26 +397,6 @@ def _time_of_day_label(hour: int) -> str:
     if 15 <= hour < 21:
         return "akşam"
     return "gece"
-
-
-class SmokingEventRepository:
-    def __init__(self, session: AsyncSession):
-        self.session = session
-
-    async def create(self, user_id: int, data: dict[str, Any]) -> SmokingEvent:
-        event = SmokingEvent(user_id=user_id, **data)
-        self.session.add(event)
-        await self.session.flush()
-        return event
-
-    async def get_recent(self, user_id: int, days: int = 30) -> list[SmokingEvent]:
-        since = datetime.utcnow() - timedelta(days=days)
-        result = await self.session.execute(
-            select(SmokingEvent)
-            .where(SmokingEvent.user_id == user_id, SmokingEvent.occurred_at >= since)
-            .order_by(SmokingEvent.occurred_at.desc())
-        )
-        return list(result.scalars().all())
 
 
 class WorkoutRepository:

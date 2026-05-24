@@ -16,7 +16,6 @@ from app.models import (
     Meal,
     Memory,
     ShadowNote,
-    SmokingEvent,
     StoicRitual,
     ThoughtRecord,
     User,
@@ -28,7 +27,6 @@ from app.repositories import (
     InsightRepository,
     MealRepository,
     MemoryRepository,
-    SmokingEventRepository,
     WorkoutRepository,
 )
 from app.repositories.philosophy import (
@@ -48,7 +46,6 @@ class ExportService:
     async def export_all(self, user_id: int) -> dict[str, Any]:
         check_ins = CheckInRepository(self.session)
         meals = MealRepository(self.session)
-        smoking = SmokingEventRepository(self.session)
         workouts = WorkoutRepository(self.session)
         conversations = ConversationRepository(self.session)
         memories = MemoryRepository(self.session)
@@ -78,7 +75,6 @@ class ExportService:
                     "mood": c.mood,
                     "sleep_quality": c.sleep_quality,
                     "energy": c.energy,
-                    "smoking_craving": c.smoking_craving,
                     "workout_done": c.workout_done,
                     "stress": c.stress,
                     "weight": float(c.weight) if c.weight else None,
@@ -94,15 +90,6 @@ class ExportService:
                     "analysis": m.ai_analysis,
                 }
                 for m in await meals.get_recent(user_id, limit=500)
-            ],
-            "smoking_events": [
-                {
-                    "type": e.event_type,
-                    "intensity": e.intensity,
-                    "note": e.trigger_note,
-                    "occurred_at": e.occurred_at.isoformat(),
-                }
-                for e in await smoking.get_recent(user_id, days=365)
             ],
             "workouts": [
                 {
@@ -219,7 +206,6 @@ class ErasureService:
             (EmotionCheckin, EmotionCheckin.user_id),
             (CheckIn, CheckIn.user_id),
             (Meal, Meal.user_id),
-            (SmokingEvent, SmokingEvent.user_id),
             (Workout, Workout.user_id),
             (User, User.id),
         ]

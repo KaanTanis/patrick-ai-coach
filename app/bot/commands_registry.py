@@ -35,7 +35,7 @@ BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="duygu", description="Hızlı duygu check-in"),
     BotCommand(command="analiz", description="Derin çok lensli analiz"),
     BotCommand(command="serbest", description="Serbest mod aç/kapa"),
-    BotCommand(command="geri", description="Gerileme bildir"),
+    BotCommand(command="zor", description="Zor an / gerileme bildir"),
     BotCommand(command="yemek", description="Öğün fotoğrafı analizi"),
     BotCommand(command="yardim", description="Komut listesi"),
     BotCommand(command="veriler", description="Verilerini dışa aktar"),

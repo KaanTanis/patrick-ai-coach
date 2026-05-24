@@ -1,7 +1,8 @@
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.behavioral.relapse import RelapseRecovery, detect_relapse_intent
+from app.ai.behavioral.setback import SetbackRecovery, detect_setback_intent
+from app.ai.interview.stop_phrases import is_stop_phrase
 from app.ai.model_router import pick_chat_model
 from app.ai.memory.extractor import MemoryExtractor
 from app.ai.memory.profile_updater import ProfileUpdater
@@ -17,6 +18,8 @@ from app.services.preferences import PreferencesService
 
 logger = structlog.get_logger()
 
+STOP_ACK = "Tamam, şimdilik bu kadar. Konuştuklarımızı kaydettim."
+
 
 class AIOrchestrator:
     def __init__(self, session: AsyncSession):
@@ -25,7 +28,7 @@ class AIOrchestrator:
         self.conversations = ConversationRepository(session)
         self.context = ContextBuilder(session)
         self.prompts = PromptComposer(session)
-        self.relapse = RelapseRecovery(session)
+        self.setback = SetbackRecovery(session)
         self.preferences = PreferencesService(session)
 
     async def orchestrate(
@@ -39,18 +42,22 @@ class AIOrchestrator:
         user = await self.users.get_or_create(telegram_id, name=user_name)
         session_id = session_id or await get_or_create_session_id(telegram_id)
 
+        if is_stop_phrase(message):
+            await self._queue_memory_extraction(user.id, message, STOP_ACK)
+            return OrchestratorResponse(text=STOP_ACK, session_id=session_id, intent="stop")
+
         crisis = self.prompts.check_crisis(message)
         if crisis:
             return OrchestratorResponse(text=crisis, session_id=session_id, intent="crisis")
 
-        if intent == "relapse" or detect_relapse_intent(message):
-            response_text = await self.relapse.handle(user.id, message, user.personality_key)
+        if intent in {"setback", "relapse"} or detect_setback_intent(message):
+            response_text = await self.setback.handle(user.id, message, user.personality_key)
             await self.conversations.add_message(user.id, session_id, "user", message)
             await self.conversations.add_message(user.id, session_id, "assistant", response_text)
             await touch_session(telegram_id, session_id)
             await self._queue_memory_extraction(user.id, message, response_text)
             await self._queue_profile_update(user.id)
-            return OrchestratorResponse(text=response_text, session_id=session_id, intent="relapse")
+            return OrchestratorResponse(text=response_text, session_id=session_id, intent="setback")
 
         active_lens = await get_lens(telegram_id)
         if active_lens:
@@ -60,8 +67,16 @@ class AIOrchestrator:
         bundle = await self.context.build(
             user.id, query=message, intent=intent, session_id=session_id
         )
+        profile_gaps = self.context.profile_gaps(bundle)
+        ask_contextual = bool(profile_gaps) and (hash(session_id) % 3 == 0)
+
         messages = await self.prompts.compose_from_bundle(
-            bundle, user_message=message, active_lens=active_lens, free_mode=free_mode
+            bundle,
+            user_message=message,
+            active_lens=active_lens,
+            free_mode=free_mode,
+            ask_contextual_question=ask_contextual,
+            profile_gaps=profile_gaps,
         )
         model = pick_chat_model(message, intent)
         max_tokens = 1200 if free_mode else 800

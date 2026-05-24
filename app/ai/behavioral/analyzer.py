@@ -3,8 +3,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import SmokingEventType
-from app.repositories import CheckInRepository, MealRepository, SmokingEventRepository, WorkoutRepository
+from app.repositories import CheckInRepository, MealRepository, MemoryRepository, WorkoutRepository
 from app.repositories.philosophy import DreamRepository, EmotionRepository, StoicRitualRepository
 
 
@@ -18,11 +17,11 @@ class BehavioralAnalyzer:
         self.session = session
         self.check_ins = CheckInRepository(session)
         self.meals = MealRepository(session)
-        self.smoking = SmokingEventRepository(session)
         self.workouts = WorkoutRepository(session)
         self.dreams = DreamRepository(session)
         self.emotions = EmotionRepository(session)
         self.stoic = StoicRitualRepository(session)
+        self.memories = MemoryRepository(session)
 
     async def detect_patterns(self, user_id: int) -> list[dict[str, Any]]:
         checkins = await self.check_ins.get_recent(user_id, days=30)
@@ -35,15 +34,19 @@ class BehavioralAnalyzer:
         low_stress = [c for c in checkins if c.stress and c.stress < 7]
 
         if high_stress and low_stress:
-            high_craving = _avg([c.smoking_craving for c in high_stress])
-            low_craving = _avg([c.smoking_craving for c in low_stress])
-            if high_craving and low_craving and high_craving > low_craving * 1.5:
+            high_mood = _avg([c.mood for c in high_stress if c.mood])
+            low_mood = _avg([c.mood for c in low_stress if c.mood])
+            if (
+                high_mood
+                and low_mood
+                and high_mood < low_mood * 0.8
+            ):
                 flags.append(
                     {
-                        "flag": "stress_smoking_correlation",
+                        "flag": "stress_mood_correlation",
                         "evidence": {
-                            "high_stress_avg_craving": round(high_craving, 1),
-                            "low_stress_avg_craving": round(low_craving, 1),
+                            "high_stress_avg_mood": round(high_mood, 1),
+                            "low_stress_avg_mood": round(low_mood, 1),
                         },
                     }
                 )
@@ -79,15 +82,26 @@ class BehavioralAnalyzer:
                 }
             )
 
-        smoking_events = await self.smoking.get_recent(user_id, days=30)
-        relapses = [e for e in smoking_events if e.event_type == SmokingEventType.RELAPSE]
-        if len(relapses) >= 2:
+        setback_count = await self.memories.count_recent_setbacks(user_id, days=30)
+        if setback_count >= 2:
             flags.append(
                 {
-                    "flag": "recurring_relapse",
-                    "evidence": {"relapse_count": len(relapses)},
+                    "flag": "recurring_setback",
+                    "evidence": {"setback_count": setback_count},
                 }
             )
+
+        reminders = await self.memories.get_reminders(user_id, limit=3)
+        if reminders and len(checkins) >= 7:
+            recent_notes = " ".join((c.notes or "") for c in checkins[:7]).lower()
+            mentioned = any(r.content[:20].lower() in recent_notes for r in reminders)
+            if not mentioned:
+                flags.append(
+                    {
+                        "flag": "reminder_followup",
+                        "evidence": {"active_reminders": len(reminders)},
+                    }
+                )
 
         meals = await self.meals.get_recent(user_id, limit=30)
         if meals and high_stress:

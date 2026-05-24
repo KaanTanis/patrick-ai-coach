@@ -5,6 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.context.bundle import ContextBuilder
 from app.ai.openai_client import get_openai_client
+from app.ai.philosophy.helpers import (
+    compute_stoic_consistency,
+    detect_dichotomy_gaps,
+)
 from app.config import get_settings
 from app.infra.redis import get_redis
 from app.repositories import CheckInRepository
@@ -32,7 +36,10 @@ Duygu-düşünce kalıpları, CBT açısından nazik gözlemler. Terapi değil.
 
 Her bölüm 80-120 kelime. Somut verilere atıf yap.""",
     "jung": """Jung perspektifinden derin analiz yaz. Sembolik, arketipsel. Teşhis/kehanet yok. 150-200 kelime Türkçe.""",
-    "stoic": """Stoacı perspektiften derin analiz yaz. Kontrol ikiligi, erdem, pratik. 150-200 kelime Türkçe.""",
+    "stoic": """Stoacı perspektiften derin analiz yaz. Kontrol ikiligi, erdem, pratik.
+Verilen tutarlılık skoruna ve dichotomy gözlemlerine atıf yap.
+Sonunda bir Marcus Aurelius veya Epiktetos aforizması + kişisel uygulama cümlesi ekle.
+150-200 kelime Türkçe.""",
     "psych": """CBT perspektifinden analiz yaz. Duygu-düşünce kalıpları. Terapi değil. 150-200 kelime Türkçe.""",
 }
 
@@ -56,7 +63,22 @@ class DeepAnalyzer:
             await redis.expire(key, 86400)
         return count <= getattr(settings, "max_daily_analysis", 2)
 
-    async def _gather_context(self, user_id: int, days: int) -> str:
+    async def _stoic_metrics(self, user_id: int, days: int) -> str:
+        counts = await self.stoic.count_recent_by_type(user_id, days=days)
+        consistency = compute_stoic_consistency(counts, days=days)
+        evening = await self.stoic.get_recent(user_id, ritual_type="evening", days=days, limit=days)
+        gaps = detect_dichotomy_gaps(evening)
+
+        lines = [
+            f"Stoic tutarlılık skoru: {consistency['score']}/100 "
+            f"({consistency['morning']} sabah, {consistency['evening']} akşam / {days} gün)",
+        ]
+        if gaps:
+            lines.append("Kontrol ikiligi gözlemleri:")
+            lines.extend(f"- {g}" for g in gaps)
+        return "\n".join(lines)
+
+    async def _gather_context(self, user_id: int, days: int, lens: str = "all") -> str:
         bundle = await self.context.build(user_id, intent="analysis")
         dreams = await self.dreams.get_recent(user_id, days=days, limit=10)
         shadows = await self.shadows.get_recent(user_id, days=days, limit=10)
@@ -74,6 +96,8 @@ class DeepAnalyzer:
             f"Stoic ritüeller: {len(rituals)} adet",
             f"Duygu check-in: {[(e.emotion, e.intensity) for e in emotions[:5]]}",
         ]
+        if lens in {"stoic", "all"}:
+            parts.append(await self._stoic_metrics(user_id, days))
         return "\n".join(parts)
 
     async def analyze(
@@ -82,7 +106,7 @@ class DeepAnalyzer:
         if not await self._rate_limit_ok(user_id):
             return "Bugünkü analiz limitine ulaştın. Yarın tekrar deneyebilirsin."
 
-        context = await self._gather_context(user_id, days)
+        context = await self._gather_context(user_id, days, lens=lens)
         prompt_key = lens if lens in LENS_PROMPTS else "all"
         prompt = f"""{LENS_PROMPTS[prompt_key]}
 

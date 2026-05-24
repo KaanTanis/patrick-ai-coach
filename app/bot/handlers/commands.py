@@ -9,7 +9,7 @@ router = Router()
 async def cmd_help(message: Message) -> None:
     await message.answer(
         "Komutlar:\n"
-        "/rapor — ruh hali, uyku, enerji, istek, antrenman, stres, kilo, motivasyon\n"
+        "/rapor — adaptif günlük rapor (sorular verine göre değişir)\n"
         "/durum — son davranış içgörüleri\n"
         "/mod <anahtar> — kişilik modu (stoic, jungian, psych_cbt, ...)\n"
         "/lens jung|stoic|psych — sonraki mesaja tek seferlik lens\n"
@@ -21,12 +21,13 @@ async def cmd_help(message: Message) -> None:
         "/duygu — hızlı duygu check-in\n"
         "/analiz [jung|stoic|psych] [7|30] — derin analiz\n"
         "/serbest ac|kapa — serbest keşif modu\n"
-        "/geri — gerileme bildir\n"
+        "/zor — zor an veya gerileme bildir\n"
         "/veriler — tüm verilerini JSON olarak indir\n"
         "/unut [tür] — hafızayı temizle\n"
         "/sil — tüm verileri kalıcı sil\n"
-        "/hatirla — bot seni ne kadar tanıyor\n"
+        "/hatirla — bot seni ne kadar tanıyor (hatırlatmalar dahil)\n"
         "/yemek — öğün kaydet (veya fotoğraf gönder)\n"
         "/iptal — aktif rapor/ritüel/kayıt işlemini iptal et\n\n"
-        "Ya da sadece sohbet et — bağlamı ve kalıpları zamanla hatırlarım."
+        "Rapor veya sohbet sırasında \"bu kadar soru yeter\" diyebilirsin.\n"
+        "Ya da sadece sohbet et — söylediklerini hatırlarım."
     )

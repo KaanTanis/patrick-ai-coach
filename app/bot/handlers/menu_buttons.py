@@ -24,8 +24,8 @@ router = Router()
 
 
 @router.message(F.text == BTN_REPORT)
-async def btn_report(message: Message, state: FSMContext) -> None:
-    await _start_checkin(message, state)
+async def btn_report(message: Message, state: FSMContext, session: AsyncSession) -> None:
+    await _start_checkin(message, state, session)
 
 
 @router.message(F.text == BTN_INSIGHTS)

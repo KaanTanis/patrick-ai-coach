@@ -5,8 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.analysis.deep_analyzer import DeepAnalyzer
 from app.ai.openai_client import get_openai_client
+from app.ai.philosophy.helpers import format_shadow_context, parse_dream_metadata
 from app.models import MemorySource, MemoryType
-from app.repositories import MemoryRepository, UserRepository
+from app.repositories import CheckInRepository, MemoryRepository, UserRepository
 from app.repositories.philosophy import DreamRepository, ShadowRepository
 from app.services.lens import VALID_LENSES, set_lens
 from app.services.preferences import PreferencesService
@@ -40,10 +41,27 @@ async def cmd_dream(message: Message, session: AsyncSession) -> None:
     user = await users.get_or_create(message.from_user.id, message.from_user.full_name)
     content = parts[1].strip()
 
+    meta_raw = await get_openai_client().chat(
+        [
+            {
+                "role": "user",
+                "content": (
+                    f"Rüyadan mood ve sembolleri çıkar. Sadece JSON döndür: "
+                    f'{{"mood": "...", "symbols": ["...", "..."]}}\n\nRüya: {content}'
+                ),
+            }
+        ],
+        model="gpt-4o-mini",
+        max_tokens=120,
+    )
+    metadata = parse_dream_metadata(meta_raw)
+
     prompt = f"""Jung perspektifinden rüya yorumu yap. Sembolik, kehanet değil, teşhis değil.
 150 kelime altı Türkçe. Sonunda 1-2 yansıtıcı soru sor.
 
-Rüya: {content}"""
+Rüya: {content}
+Mood: {metadata.get('mood') or 'belirtilmedi'}
+Semboller: {metadata.get('symbols') or []}"""
 
     interpretation = await get_openai_client().chat(
         [{"role": "user", "content": prompt}], model="gpt-4o", max_tokens=400
@@ -52,7 +70,12 @@ Rüya: {content}"""
     dreams = DreamRepository(session)
     await dreams.create(
         user.id,
-        {"content": content, "ai_interpretation": interpretation},
+        {
+            "content": content,
+            "mood": metadata.get("mood"),
+            "symbols": metadata.get("symbols"),
+            "ai_interpretation": interpretation,
+        },
     )
 
     mem = MemoryRepository(session)
@@ -84,16 +107,29 @@ async def cmd_shadow(message: Message, session: AsyncSession) -> None:
     user = await users.get_or_create(message.from_user.id, message.from_user.full_name)
     content = parts[1].strip()
 
+    checkins = CheckInRepository(session)
+    memories = MemoryRepository(session)
+    shadows = ShadowRepository(session)
+
+    recent_checkins = await checkins.get_recent(user.id, days=7)
+    recent_setback = await memories.get_recent_relapse(user.id, days=30)
+    recent_setbacks = [recent_setback] if recent_setback else []
+    recent_shadows = await shadows.get_recent(user.id, days=30, limit=2)
+
+    context_block = format_shadow_context(recent_checkins, recent_setbacks, recent_shadows)
+
     prompt = f"""Gölge perspektifinden kısa yansıtma yap.
 "Bu gölge neyi koruyor olabilir?" formatında. Teşhis yok. 120 kelime altı Türkçe.
 
-Not: {content}"""
+Bağlam:
+{context_block}
+
+Bugünkü gölge notu: {content}"""
 
     reflection = await get_openai_client().chat(
         [{"role": "user", "content": prompt}], model="gpt-4o", max_tokens=300
     )
 
-    shadows = ShadowRepository(session)
     await shadows.create(user.id, content, reflection)
     await message.answer(reflection)
 

@@ -139,18 +139,25 @@ class ProactiveCoach:
         return evaluate_outreach(user, checkin is not None)
 
     async def compose_message(self, user: User, decision: OutreachDecision) -> str:
-        base = NUDGE_TEMPLATES.get(decision.nudge_type, NUDGE_TEMPLATES["mini_pulse"])
+        from app.repositories import MemoryRepository
 
-        if user.context_summary:
+        base = NUDGE_TEMPLATES.get(decision.nudge_type, NUDGE_TEMPLATES["mini_pulse"])
+        reminders = await MemoryRepository(self.session).get_reminders(user.id, limit=2)
+        reminder_hint = ""
+        if reminders:
+            reminder_hint = "Hatırlatmalar: " + "; ".join(r.content[:80] for r in reminders)
+
+        if user.context_summary or reminder_hint:
             from app.ai.openai_client import get_openai_client
 
             prompt = f"""Kişisel koç olarak kısa bir proaktif mesaj yaz (max 80 kelime, Türkçe).
 Mesaj türü: {decision.nudge_type}
 Şablon fikir: {base}
-Kullanıcı profili: {user.context_summary[:800]}
+Kullanıcı profili: {(user.context_summary or '')[:800]}
+{reminder_hint}
 Vardiya bilgisi: {user.schedule or {}}
 Kişilik: {user.personality_key}
-Samimi ol. Rapor/check-in davet et."""
+Varsa hatırlatmalardan birini doğal şekilde ekle. Samimi ol. Rapor/check-in davet et."""
 
             try:
                 return await get_openai_client().chat(

@@ -2,6 +2,8 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class CheckInStates(StatesGroup):
+    adaptive = State()
+    # Legacy states kept for compatibility
     mood = State()
     sleep = State()
     energy = State()

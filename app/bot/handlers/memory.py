@@ -3,6 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models import MemoryType
 from app.repositories import MemoryRepository, UserRepository
 
 router = Router()
@@ -12,6 +13,7 @@ MEMORY_TYPE_TR = {
     "trigger": "Tetikleyici",
     "pattern": "Kalıp",
     "goal": "Hedef",
+    "reminder": "Hatırlatma",
     "insight": "İçgörü",
     "relapse": "Gerileme",
     "schedule": "Program",
@@ -27,8 +29,9 @@ async def cmd_remember(message: Message, session: AsyncSession) -> None:
     memories = MemoryRepository(session)
     top = await memories.get_top_memories(user.id, limit=10)
     episodes = await memories.get_recent_episodes(user.id, days=30, limit=5)
+    reminders = await memories.get_reminders(user.id, limit=5)
 
-    parts = ["🧠 Seni nasıl tanıyorum\n"]
+    parts = ["Seni nasıl tanıyorum\n"]
 
     if user.context_summary:
         parts.append("--- Profil ---")
@@ -38,6 +41,11 @@ async def cmd_remember(message: Message, session: AsyncSession) -> None:
     else:
         parts.append("--- Profil ---")
         parts.append("Henüz profil özeti oluşturulmadı.")
+
+    if reminders:
+        parts.append("\n--- Hatırlatmalar / hedefler ---")
+        for r in reminders:
+            parts.append(f"• {r.content[:120]}")
 
     if user.schedule:
         parts.append("\n--- Program / vardiya ---")
@@ -54,10 +62,12 @@ async def cmd_remember(message: Message, session: AsyncSession) -> None:
     if top:
         parts.append("\n--- Önemli hafıza kayıtları ---")
         for m in top[:10]:
+            if m.memory_type in {MemoryType.GOAL, MemoryType.REMINDER}:
+                continue
             label = MEMORY_TYPE_TR.get(m.memory_type, m.memory_type)
             parts.append(f"• [{label}] {m.content[:100]}")
 
-    if not top and not episodes and not user.context_summary:
+    if not top and not episodes and not user.context_summary and not reminders:
         parts.append("\nHenüz kayıtlı hafıza yok. Sohbet ettikçe seni tanımaya başlayacağım.")
 
     text = "\n".join(parts)
